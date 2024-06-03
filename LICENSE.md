@@ -1,7 +1,9 @@
 MIT License
 
 Original work Copyright (C) 2011 - 2013 by Eric Rowell (KineticJS)
+
 Modified work Copyright (C) 2014 - present by Anton Lavrenov (Konva)
+
 Modifed work Copyright (C) 2024 - present by Niall Brown
 
 
