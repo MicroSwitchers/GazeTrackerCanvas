@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="https://unpkg.com/konva@9.3.11/konva.min.js"></script>
+    <meta charset="utf-8" />
+    <title>Gaze Tracker Canvas</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            display: flex;
+            background-color: #f0f0f0;
+        }
+        #toolbar {
+            width: 50px;
+            background: #ddd;
+            padding: 10px 5px;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        #container {
+            flex: 1;
+            height: 100vh;
+            background-color: rgb(242, 242, 242); /* Default background color */
+        }
+        .toolbar-button, .color-swatch, .upload-icon {
+            width: 40px;
+            height: 40px;
+            margin: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+        }
+        .toolbar-button {
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+        }
+        .color-swatch {
+            border: 1px solid #ccc;
+        }
+        .hidden {
+            display: none;
+        }
+        #textPopup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #fff;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+        #textPopup input, #textPopup select {
+            display: block;
+            margin: 10px 0;
+            padding: 5px;
+            font-size: 14px;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="toolbar">
+        <div class="upload-icon" onclick="document.getElementById('file-input').click();">📁</div>
+        <div class="toolbar-button" id="addText">T</div>
+        <div class="toolbar-button" id="increaseSize">+</div>
+        <div class="toolbar-button" id="decreaseSize">-</div>
+        <div class="toolbar-button" id="deleteItem">X</div>
+        <!-- Background color change buttons -->
+        <div class="color-swatch" style="background-color: white;" title="White" onclick="changeBackgroundColor('white')"></div>
+        <div class="color-swatch" style="background-color: #404040;" title="25% Grey" onclick="changeBackgroundColor('#404040')"></div>
+        <div class="color-swatch" style="background-color: #BFBFBF;" title="75% Grey" onclick="changeBackgroundColor('#BFBFBF')"></div>
+        <div class="color-swatch" style="background-color: black;" title="Black" onclick="changeBackgroundColor('black')"></div>
+    </div>
+    <div id="container"></div>
+
+    <!-- Hidden file input for selecting files -->
+    <input type="file" id="file-input" class="hidden" accept="image/jpeg, image/png, video/mp4, video/webm" multiple onchange="handleFiles(this.files)">
+
+    <div id="textPopup">
+        <h3>Add Text</h3>
+        <input type="text" id="popupTextInput" placeholder="Enter text" />
+        <label for="colorPicker">Color:</label>
+        <input type="color" id="colorPicker" value="#000000" />
+        <label for="fontPicker">Font:</label>
+        <select id="fontPicker">
+            <option value="Arial">Arial</option>
+            <option value="Georgia">Georgia</option>
+            <option value="Times New Roman">Times New Roman</option>
+            <option value="Verdana">Verdana</option>
+        </select>
+        <button id="addTextButton">Add</button>
+        <button id="cancelTextButton">Cancel</button>  
+    </div>
+
+    <script>
+        var stage = new Konva.Stage({
+            container: 'container',
+            width: window.innerWidth - 50,
+            height: window.innerHeight
+        });
+
+        var layer = new Konva.Layer();
+        stage.add(layer);
+
+        var transformer = new Konva.Transformer();
+        layer.add(transformer);
+
+        var selectedElement = null;
+
+        function changeBackgroundColor(color) {
+            document.getElementById('container').style.backgroundColor = color;
+        }
+
+        document.getElementById('container').addEventListener('dragover', function(e) {
+            e.preventDefault(); // Prevent the browser from default file drag and drop action.
+        });
+
+        document.getElementById('container').addEventListener('drop', function(e) {
+            e.preventDefault(); // Prevent the browser from following the URL.
+            handleFiles(e.dataTransfer.files); // Process the files directly.
+        });
+
+        function handleFiles(files) {
+            Array.from(files).forEach(file => {
+                if (file.type.startsWith('image/')) {
+                    var reader = new FileReader();
+                    reader.onload = function (e) {
+                        var img = new Image();
+                        img.onload = function () {
+                            drawImage(img);
+                        };
+                        img.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                } else if (file.type.startsWith('video/')) {
+                    // Handle video files similarly if needed
+                }
+            });
+        }
+
+        function drawImage(imageObj) {
+            var imgWidth = imageObj.width;
+            var imgHeight = imageObj.height;
+            var scale = Math.min(stage.width() / imgWidth, stage.height() / imgHeight);
+
+            var image = new Konva.Image({
+                image: imageObj,
+                x: (stage.width() - imgWidth * scale) / 2,
+                y: (stage.height() - imgHeight * scale) / 2,
+                width: imgWidth * scale,
+                height: imgHeight * scale,
+                draggable: true
+            });
+
+            image.on('mousedown', function() {
+                selectedElement = this;
+                transformer.nodes([this]);
+                transformer.forceUpdate();
+                layer.draw();
+            });
+
+            layer.add(image);
+            layer.draw();
+        }
+
+        document.getElementById('addText').addEventListener('click', function() {
+            document.getElementById('textPopup').style.display = 'block';
+        });
+
+        document.getElementById('addTextButton').addEventListener('click', function() {
+            var text = document.getElementById('popupTextInput').value;
+            var color = document.getElementById('colorPicker').value;
+            var font = document.getElementById('fontPicker').value;
+            addText(text, color, font);
+            closeTextPopup(); // Close the text popup after adding text
+        });
+
+        function addText(text, color, font) {
+            var textNode = new Konva.Text({
+                text: text,
+                x: stage.width() / 2,
+                y: stage.height() / 2,
+                fontSize: 24,
+                fontFamily: font,
+                fill: color,
+                draggable: true
+            });
+
+            textNode.on('mousedown', function() {
+                selectedElement = this;
+                transformer.nodes([this]);
+                transformer.forceUpdate();
+                layer.draw();
+            });
+
+            layer.add(textNode);
+            layer.draw();
+        }
+
+        function closeTextPopup() {
+            document.getElementById('textPopup').style.display = 'none';
+            document.getElementById('popupTextInput').value = '';
+        }
+
+        document.getElementById('cancelTextButton').addEventListener('click', closeTextPopup);
+
+        document.getElementById('increaseSize').addEventListener('click', function() {
+            if (selectedElement && selectedElement.scaleX) {
+                var newScale = selectedElement.scaleX() * 1.1;
+                selectedElement.scaleX(newScale);
+                selectedElement.scaleY(newScale);
+                transformer.forceUpdate();
+                layer.draw();
+            }
+        });
+
+        document.getElementById('decreaseSize').addEventListener('click', function() {
+            if (selectedElement && selectedElement.scaleX) {
+                var newScale = selectedElement.scaleX() * 0.9;
+                selectedElement.scaleX(newScale);
+                selectedElement.scaleY(newScale);
+                transformer.forceUpdate();
+                layer.draw();
+            }
+        });
+
+        document.getElementById('deleteItem').addEventListener('click', function() {
+            if (selectedElement) {
+                selectedElement.destroy();
+                transformer.nodes([]);
+                layer.draw();
+            }
+        });
+
+        stage.on('click', function(e) {
+            if (e.target === stage) {
+                transformer.nodes([]);
+                selectedElement = null;
+                layer.draw();
+            }
+        });
+
+        window.addEventListener('resize', function() {
+            stage.width(window.innerWidth - 50);
+            stage.height(window.innerHeight);
+            stage.draw();
+        });
+    </script>
+</body>
+</html>
