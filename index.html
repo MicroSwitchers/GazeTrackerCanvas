@@ -111,13 +111,20 @@
         var layer = new Konva.Layer();
         stage.add(layer);
 
-        var transformer = new Konva.Transformer();
+        var transformer = new Konva.Transformer({
+            anchorSize: 20, // Larger handles for touch interaction
+            rotateAnchorOffset: 30, // More accessible rotate anchor
+            borderDash: [3, 3]
+        });
         layer.add(transformer);
 
         var selectedElement = null;
 
         function changeBackgroundColor(color) {
-            document.getElementById('container').style.backgroundColor = color;
+            var container = document.getElementById('container');
+            if (container) {
+                container.style.backgroundColor = color;
+            }
         }
 
         document.getElementById('container').addEventListener('dragover', function(e) {
@@ -179,6 +186,7 @@
             var color = document.getElementById('colorPicker').value;
             var font = document.getElementById('fontPicker').value;
             addText(text, color, font);
+            closeTextPopup(); // Ensure the popup closes after adding text
         });
 
         function addText(text, color, font) {
@@ -201,7 +209,6 @@
 
             layer.add(textNode);
             layer.draw();
-            closeTextPopup();
         }
 
         function closeTextPopup() {
