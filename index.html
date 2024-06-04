@@ -74,6 +74,7 @@
         <div class="toolbar-button" id="increaseSize">+</div>
         <div class="toolbar-button" id="decreaseSize">-</div>
         <div class="toolbar-button" id="deleteItem">X</div>
+        <div class="toolbar-button" id="shakeButton">🔃</div> <!-- Shake button -->
         <!-- Background color change buttons -->
         <div class="color-swatch" style="background-color: white;" title="White" onclick="changeBackgroundColor('white')"></div>
         <div class="color-swatch" style="background-color: #404040;" title="25% Grey" onclick="changeBackgroundColor('#404040')"></div>
@@ -95,10 +96,10 @@
             <option value="Arial">Arial</option>
             <option value="Georgia">Georgia</option>
             <option value="Times New Roman">Times New Roman</option>
-            <option value="Verdana">Verdana</toption>
+            <option value="Verdana">Verdana</option>
         </select>
         <button id="addTextButton">Add</button>
-        <button id="cancelTextButton">Cancel</button>  
+        <button id="cancelTextButton">Close</button>  
     </div>
 
     <script>
@@ -118,6 +119,7 @@
             keepRatio: true,
             enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right']
         });
+        layer.add(transformer);
 
         function updateActiveElement(node) {
             layer.add(transformer);
@@ -126,13 +128,11 @@
         }
 
         stage.on('click', function(e) {
-            // Deselect when clicking on empty space
             if (e.target === stage) {
                 transformer.nodes([]);
                 layer.draw();
                 return;
             }
-            // Configure transformer for the clicked object
             if (e.target.hasName('selectable')) {
                 updateActiveElement(e.target);
             }
@@ -195,7 +195,6 @@
             var color = document.getElementById('colorPicker').value;
             var font = document.getElementById('fontPicker').value;
             addText(text, color, font);
-            closeTextPopup(); // Ensure the popup closes after adding text
         });
 
         function addText(text, color, font) {
@@ -251,6 +250,38 @@
                 layer.draw();
             }
         });
+
+        // Add shaking effect
+        document.getElementById('shakeButton').addEventListener('click', function() {
+            if (transformer.nodes().length > 0) {
+                var node = transformer.nodes()[0];
+                shakeElement(node);
+            }
+        });
+
+        function shakeElement(node) {
+            var period = 160; // Increased to slow down the shake
+            var amplitude = 10; // Distance in pixels to move left/right
+            var duration = 5000; // Total time for shake effect
+            var count = duration / period;
+            var displacement = amplitude;
+
+            for (let i = 0; i < count; i++) {
+                setTimeout(() => {
+                    node.x(node.x() + displacement);
+                    layer.draw();
+                    displacement *= -1; // Reverse direction
+                }, i * period);
+            }
+            // Reset position and set a pause after shaking
+            setTimeout(() => {
+                node.x(node.x() + displacement); // Reset to original position
+                layer.draw();
+            }, count * period);
+            setTimeout(() => {
+                shakeElement(node); // Restart shaking after 8-second pause
+            }, count * period + 8000);
+        }
 
         window.addEventListener('resize', function() {
             stage.width(window.innerWidth - 50);
