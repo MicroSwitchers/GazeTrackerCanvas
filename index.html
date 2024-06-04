@@ -95,7 +95,7 @@
             <option value="Arial">Arial</option>
             <option value="Georgia">Georgia</option>
             <option value="Times New Roman">Times New Roman</option>
-            <option value="Verdana">Verdana</option>
+            <option value="Verdana">Verdana</toption>
         </select>
         <button id="addTextButton">Add</button>
         <button id="cancelTextButton">Cancel</button>  
@@ -112,28 +112,39 @@
         stage.add(layer);
 
         var transformer = new Konva.Transformer({
-            anchorSize: 20, // Larger handles for touch interaction
-            rotateAnchorOffset: 30, // More accessible rotate anchor
-            borderDash: [3, 3]
+            anchorSize: 20,
+            rotateAnchorOffset: 30,
+            borderDash: [3, 3],
+            keepRatio: true,
+            enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right']
         });
-        layer.add(transformer);
 
-        var selectedElement = null;
-
-        function changeBackgroundColor(color) {
-            var container = document.getElementById('container');
-            if (container) {
-                container.style.backgroundColor = color;
-            }
+        function updateActiveElement(node) {
+            layer.add(transformer);
+            transformer.nodes([node]);
+            layer.draw();
         }
 
+        stage.on('click', function(e) {
+            // Deselect when clicking on empty space
+            if (e.target === stage) {
+                transformer.nodes([]);
+                layer.draw();
+                return;
+            }
+            // Configure transformer for the clicked object
+            if (e.target.hasName('selectable')) {
+                updateActiveElement(e.target);
+            }
+        });
+
         document.getElementById('container').addEventListener('dragover', function(e) {
-            e.preventDefault(); // Prevent the browser from default file drag and drop action.
+            e.preventDefault();
         });
 
         document.getElementById('container').addEventListener('drop', function(e) {
-            e.preventDefault(); // Prevent the browser from following the URL.
-            handleFiles(e.dataTransfer.files); // Process the files directly.
+            e.preventDefault();
+            handleFiles(e.dataTransfer.files);
         });
 
         function handleFiles(files) {
@@ -163,18 +174,16 @@
                 y: (stage.height() - imgHeight * scale) / 2,
                 width: imgWidth * scale,
                 height: imgHeight * scale,
-                draggable: true
-            });
-
-            image.on('mousedown touchstart', function() {
-                selectedElement = this;
-                transformer.nodes([this]);
-                transformer.forceUpdate();
-                layer.draw();
+                draggable: true,
+                name: 'selectable'
             });
 
             layer.add(image);
             layer.draw();
+        }
+
+        function changeBackgroundColor(color) {
+            document.getElementById('container').style.backgroundColor = color;
         }
 
         document.getElementById('addText').addEventListener('click', function() {
@@ -192,19 +201,13 @@
         function addText(text, color, font) {
             var textNode = new Konva.Text({
                 text: text,
-                x: stage.width() / 2,
-                y: stage.height() / 2,
+                x: 50,
+                y: 50,
                 fontSize: 24,
                 fontFamily: font,
                 fill: color,
-                draggable: true
-            });
-
-            textNode.on('mousedown touchstart', function() {
-                selectedElement = this;
-                transformer.nodes([this]);
-                transformer.forceUpdate();
-                layer.draw();
+                draggable: true,
+                name: 'selectable'
             });
 
             layer.add(textNode);
@@ -219,37 +222,32 @@
         document.getElementById('cancelTextButton').addEventListener('click', closeTextPopup);
 
         document.getElementById('increaseSize').addEventListener('click', function() {
-            if (selectedElement && selectedElement.scaleX) {
-                var newScale = selectedElement.scaleX() * 1.1;
-                selectedElement.scaleX(newScale);
-                selectedElement.scaleY(newScale);
+            if (transformer.nodes().length > 0) {
+                var node = transformer.nodes()[0];
+                var newScale = node.scaleX() * 1.1;
+                node.scaleX(newScale);
+                node.scaleY(newScale);
                 transformer.forceUpdate();
                 layer.draw();
             }
         });
 
         document.getElementById('decreaseSize').addEventListener('click', function() {
-            if (selectedElement && selectedElement.scaleX) {
-                var newScale = selectedElement.scaleX() * 0.9;
-                selectedElement.scaleX(newScale);
-                selectedElement.scaleY(newScale);
+            if (transformer.nodes().length > 0) {
+                var node = transformer.nodes()[0];
+                var newScale = node.scaleX() * 0.9;
+                node.scaleX(newScale);
+                node.scaleY(newScale);
                 transformer.forceUpdate();
                 layer.draw();
             }
         });
 
         document.getElementById('deleteItem').addEventListener('click', function() {
-            if (selectedElement) {
-                selectedElement.destroy();
+            if (transformer.nodes().length > 0) {
+                var node = transformer.nodes()[0];
+                node.destroy();
                 transformer.nodes([]);
-                layer.draw();
-            }
-        });
-
-        stage.on('click', function(e) {
-            if (e.target === stage) {
-                transformer.nodes([]);
-                selectedElement = null;
                 layer.draw();
             }
         });
