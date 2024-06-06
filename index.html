@@ -10,7 +10,7 @@
             padding: 0;
             overflow: hidden;
             display: flex;
-            background-color: #f0f0f0;
+            background-color: #e3e2e0;
         }
         #toolbar {
             width: 50px;
@@ -69,17 +69,17 @@
 </head>
 <body>
     <div id="toolbar">
-        <div class="upload-icon" onclick="document.getElementById('file-input').click();">📁</div>
+        <div class="toolbar-button" onclick="document.getElementById('file-input').click();">📁</div>
         <div class="toolbar-button" id="addText">T</div>
         <div class="toolbar-button" id="increaseSize">+</div>
         <div class="toolbar-button" id="decreaseSize">-</div>
         <div class="toolbar-button" id="deleteItem">X</div>
-        <div class="toolbar-button" id="shakeButton">🔃</div> <!-- Shake button -->
+        <div class="toolbar-button" id="shakeButton">↔️</div> <!-- Shake button -->
+        <div class="toolbar-button" id="circleButton">↺</div> <!-- Circle motion button -->
         <!-- Background color change buttons -->
-        <div class="color-swatch" style="background-color: white;" title="White" onclick="changeBackgroundColor('white')"></div>
-        <div class="color-swatch" style="background-color: #404040;" title="25% Grey" onclick="changeBackgroundColor('#404040')"></div>
-        <div class="color-swatch" style="background-color: #BFBFBF;" title="75% Grey" onclick="changeBackgroundColor('#BFBFBF')"></div>
-        <div class="color-swatch" style="background-color: black;" title="Black" onclick="changeBackgroundColor('black')"></div>
+        <div class="color-swatch" style="background-color: #e0ddca;" title="Buff Colour" onclick="changeBackgroundColor('#b8b6a8')"></div>
+        <div class="color-swatch" style="background-color: #4e4a43;" title="Drak Buff" onclick="changeBackgroundColor('#37342e')"></div>
+        <div class="color-swatch" style="background-color: #1b1a18;" title="Dark" onclick="changeBackgroundColor('#1b1a18')"></div>
     </div>
     <div id="container"></div>
 
@@ -251,7 +251,7 @@
             }
         });
 
-        // Add shaking effect
+        // Add smooth shaking effect
         document.getElementById('shakeButton').addEventListener('click', function() {
             if (transformer.nodes().length > 0) {
                 var node = transformer.nodes()[0];
@@ -260,27 +260,50 @@
         });
 
         function shakeElement(node) {
-            var period = 160; // Increased to slow down the shake
-            var amplitude = 10; // Distance in pixels to move left/right
-            var duration = 5000; // Total time for shake effect
-            var count = duration / period;
-            var displacement = amplitude;
+            var amplitude = 20; // Distance in pixels to move left/right
+            var period = 300; // Total time for one shake cycle
+            var shakeAnimation = new Konva.Animation(function(frame) {
+                var dx = amplitude * Math.sin(frame.time * (2 * Math.PI) / period);
+                node.x(node.getAttr('originalX') + dx);
+            }, layer);
 
-            for (let i = 0; i < count; i++) {
-                setTimeout(() => {
-                    node.x(node.x() + displacement);
-                    layer.draw();
-                    displacement *= -1; // Reverse direction
-                }, i * period);
+            node.setAttr('originalX', node.x());
+            shakeAnimation.start();
+
+            setTimeout(function() {
+                shakeAnimation.stop();
+            }, 1000);
+        }
+
+        // Add circular motion animation
+        document.getElementById('circleButton').addEventListener('click', function() {
+            if (transformer.nodes().length > 0) {
+                var node = transformer.nodes()[0];
+                moveInCircle(node);
             }
-            // Reset position and set a pause after shaking
-            setTimeout(() => {
-                node.x(node.x() + displacement); // Reset to original position
-                layer.draw();
-            }, count * period);
-            setTimeout(() => {
-                shakeElement(node); // Restart shaking after 8-second pause
-            }, count * period + 8000);
+        });
+
+        function moveInCircle(node) {
+            var radius = 40; // Radius of the circular motion
+            var centerX = node.x();
+            var centerY = node.y();
+            var period = 1500; // Total time for one circular motion
+            var startTime = new Date().getTime();
+
+            var circleAnimation = new Konva.Animation(function(frame) {
+                var elapsed = frame.time - startTime;
+                var angle = (elapsed % period) / period * Math.PI * 2;
+                var x = centerX + radius * Math.cos(angle);
+                var y = centerY + radius * Math.sin(angle);
+                node.x(x);
+                node.y(y);
+            }, layer);
+
+            circleAnimation.start();
+
+            setTimeout(function() {
+                circleAnimation.stop();
+            }, 5000);
         }
 
         window.addEventListener('resize', function() {
