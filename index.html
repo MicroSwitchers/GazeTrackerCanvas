@@ -326,19 +326,11 @@
             min-width: 50px;
             text-align: center;
             border: 1px solid rgba(52, 199, 89, 0.3);
+            flex-shrink: 0;
         }
 
         .text-preview-container {
             margin: 20px 24px;
-        }
-
-        .text-preview-title {
-            font-size: 14px;
-            font-weight: 600;
-            color: #ffffff;
-            margin-bottom: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
         }
 
         #textPreview {
@@ -348,7 +340,7 @@
             padding: 20px;
             text-align: center;
             min-height: 60px;
-            cursor: move;
+            cursor: default; /* Changed from move to default */
             transition: all 0.3s ease;
             color: white;
             display: flex;
@@ -359,7 +351,7 @@
         }
 
         #textPreview::before {
-            content: '⊞';
+            content: ''; /* Removed drag indicator */
             position: absolute;
             top: 8px;
             right: 12px;
@@ -883,9 +875,10 @@
         <div class="toolbar-content">
             <div class="toolbar-group">
                 <div class="toolbar-group-label">Files</div>
-                <button class="toolbar-button" onclick="document.getElementById('file-input').click();" aria-label="Upload images and videos" title="Upload Media">📁</button>
-                <button class="toolbar-button" onclick="document.getElementById('folder-input').click();" aria-label="Upload folder" title="Upload Folder">📂</button>
+                <button class="toolbar-button" id="file-input-button" aria-label="Upload images and videos" title="Upload Media">📁</button>
+                <button class="toolbar-button" id="folder-input-button" aria-label="Upload folder" title="Upload Folder">📂</button>
                 <button class="toolbar-button" id="setBackgroundImage" aria-label="Set Background Image" title="Set Background Image">▧</button>
+                <button class="toolbar-button" id="setForegroundImage" aria-label="Set Foreground Image" title="Upload Foreground Image">▣</button>
                 <button class="toolbar-button" id="fullscreenToggle" aria-label="Toggle fullscreen" title="Toggle Fullscreen - Press F11">⛶</button>
             </div>
             
@@ -951,6 +944,7 @@
     <input type="file" id="file-input" class="hidden" accept="image/jpeg, image/png, image/gif, video/mp4, video/webm, video/ogg" multiple>
     <input type="file" id="folder-input" class="hidden" webkitdirectory directory multiple>
     <input type="file" id="background-image-input" class="hidden" accept="image/jpeg, image/png">
+    <input type="file" id="foreground-image-input" class="hidden" accept="image/jpeg, image/png">
 
     <div id="textPopup" role="dialog" aria-labelledby="textPopupTitle">
         <div id="textPopupTitleBar">
@@ -959,8 +953,8 @@
         <div id="textPopupContent">
             <div class="text-preview-container">
                 <div class="text-preview-title">Live Preview</div>
-                <div id="textPreview" draggable="true">Preview Text</div>
-                <div class="text-form-description" style="margin-top: 8px; text-align: center;">Drag this preview to the canvas to place text</div>
+                <div id="textPreview">Preview Text</div> <!-- Removed draggable -->
+                <div class="text-form-description" style="margin-top: 8px; text-align: center;">Your text will appear directly on the canvas.</div> <!-- Updated description -->
             </div>
             
             <div class="text-form-section">
@@ -1029,6 +1023,9 @@
             <div id="assetsList"></div>
             <h4 class="assets-panel-section-title">Background Images</h4>
             <div id="backgroundAssetsList"></div>
+            <h4 class="assets-panel-section-title">Foreground Images</h4>
+            <div id="foregroundAssetsList"></div>
+            <!-- Removed Text section -->
         </div>
     </div>
 
@@ -1063,7 +1060,7 @@
                         <div class="settings-row-description">Number of complete shake cycles</div>
                     </div>
                     <div class="settings-row-control">
-                        <input type="number" id="shakeRepetitions" class="settings-input-number" min="1" max="10" value="5">
+                        <input type="number" id="shakeRepetitions" class="settings-input-number" min="1" max="10" value="3">
                     </div>
                 </div>
                 
@@ -1094,8 +1091,8 @@
                         <div class="settings-row-description">How fast the circular motion occurs</div>
                     </div>
                     <div class="settings-row-control">
-                        <input type="range" id="circleSpeed" class="settings-input-range" min="0.1" max="2" step="0.1" value="1">
-                        <div class="settings-value-display" id="circleSpeedValue">1x</div>
+                        <input type="range" id="circleSpeed" class="settings-input-range" min="0.1" max="2" step="0.1" value="0.5">
+                        <div class="settings-value-display" id="circleSpeedValue">0.5x</div>
                     </div>
                 </div>
                 
@@ -1105,7 +1102,7 @@
                         <div class="settings-row-description">Number of complete circular rotations</div>
                     </div>
                     <div class="settings-row-control">
-                        <input type="number" id="circleRepetitions" class="settings-input-number" min="1" max="10" value="5">
+                        <input type="number" id="circleRepetitions" class="settings-input-number" min="1" max="10" value="3">
                     </div>
                 </div>
                 
@@ -1115,8 +1112,8 @@
                         <div class="settings-row-description">Size of the circular movement path</div>
                     </div>
                     <div class="settings-row-control">
-                        <input type="range" id="circleRadius" class="settings-input-range" min="10" max="200" step="10" value="100">
-                        <div class="settings-value-display" id="circleRadiusValue">100px</div>
+                        <input type="range" id="circleRadius" class="settings-input-range" min="10" max="200" step="10" value="50">
+                        <div class="settings-value-display" id="circleRadiusValue">50px</div>
                     </div>
                 </div>
             </div>
@@ -1160,1365 +1157,1395 @@
     </div>
 
     <script>
-        // Global variables to store animation settings and Konva objects
-        let shakeSettings = { speed: 0.7, repetitions: 5, distance: 100 };
-        let circleSettings = { speed: 1, repetitions: 5, radius: 100 };
-        let flipSettings = { speed: 1, repetitions: 1 };
-        let stage, layer, transformer, backgroundLayer; // Added backgroundLayer
-        let activeGifAnimations = new Map(); // Track active GIF animations
-        let activeAnimations = new Map(); // Track all active animations
-        let mediaElements = new Map(); // Track all media elements for cleanup
-        let assetCache = new Map(); // Cache loaded assets for instant dragging
-        let currentBackgroundNode = null; // Global variable to hold the current background image Konva node
-        let lastSelectedNode = null; // Track the last selected node for animations
+        class GazeTrackerApp {
+            constructor() {
+                // Konva Stage and Layers
+                this.stage = null;
+                this.layer = null;
+                this.transformer = null;
+                this.backgroundLayer = null;
+                this.foregroundLayer = null;
 
-        // Define panel-related constants and functions early for broad access
-        const assetsPanel = document.getElementById('assetsPanel');
-        const assetsPanelToggle = document.getElementById('assetsPanelToggle');
+                // Animation Settings
+                this.shakeSettings = { speed: 0.7, repetitions: 3, distance: 100 };
+                this.circleSettings = { speed: 0.5, repetitions: 3, radius: 50 }; 
+                this.flipSettings = { speed: 1, repetitions: 1 };
 
-        /**
-         * Opens the assets panel if it's currently closed, allowing users to see newly added media.
-         */
-        function openAssetsPanel() {
-            if (!assetsPanel.classList.contains('expanded')) {
-                assetsPanel.classList.add('expanded');
-                assetsPanelToggle.innerHTML = '▶';
-                assetsPanelToggle.title = 'Collapse Media Library';
-                // Resize stage after the panel has had a moment to animate open
-                setTimeout(resizeStage, 300); 
-            }
-        }
+                // Maps for managing Konva nodes and assets
+                this.activeGifAnimations = new Map(); // Track active GIF animations
+                this.activeAnimations = new Map(); // Track all Konva.Animation instances
+                this.mediaElements = new Map(); // Track all Konva nodes added to main layer
+                this.assetCache = new Map(); // Cache loaded assets (HTMLImageElement, HTMLVideoElement, text data)
 
-        // Utility functions
-        function showLoading() {
-            document.getElementById('loadingIndicator').style.display = 'block';
-        }
+                // References to current fixed layers and last selected node
+                this.currentBackgroundNode = null;
+                this.currentForegroundNode = null;
+                this.lastSelectedNode = null;
 
-        function hideLoading() {
-            document.getElementById('loadingIndicator').style.display = 'none';
-        }
-
-        function showFolderLoading(current, total) {
-            const indicator = document.getElementById('folderLoadingIndicator');
-            const countEl = document.getElementById('folderLoadingCount');
-            const totalEl = document.getElementById('folderLoadingTotal');
-            const progressBar = document.getElementById('folderLoadingProgress');
-            indicator.style.display = 'block';
-            countEl.textContent = current;
-            totalEl.textContent = total;
-            const percentage = total > 0 ? (current / total) * 100 : 0;
-            progressBar.style.width = percentage + '%';
-        }
-
-        function hideFolderLoading() {
-            document.getElementById('folderLoadingIndicator').style.display = 'none';
-        }
-
-        function showShortcutFeedback(message) {
-            // Create or update feedback element
-            let feedback = document.getElementById('shortcutFeedback');
-            if (!feedback) {
-                feedback = document.createElement('div');
-                feedback.id = 'shortcutFeedback';
-                feedback.style.cssText = `
-                    position: fixed;
-                    top: 20px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    background: rgba(52, 199, 89, 0.9);
-                    color: white;
-                    padding: 8px 16px;
-                    border-radius: 6px;
-                    font-size: 12px;
-                    font-weight: 600;
-                    z-index: 2001;
-                    opacity: 0;
-                    transition: opacity 0.3s ease;
-                    pointer-events: none;
-                `;
-                document.body.appendChild(feedback);
-            }
-            feedback.textContent = message;
-            feedback.style.opacity = '1';
-            // Clear any existing timeout
-            if (feedback.hideTimeout) {
-                clearTimeout(feedback.hideTimeout);
-            }
-            // Hide after 1.5 seconds
-            feedback.hideTimeout = setTimeout(() => {
-                feedback.style.opacity = '0';
-            }, 1500);
-        }
-
-        function showError(message) {
-            const errorEl = document.getElementById('errorMessage');
-            errorEl.textContent = message;
-            errorEl.style.display = 'block';
-            setTimeout(() => {
-                errorEl.style.display = 'none';
-            }, 3000);
-        }
-
-        function updateActiveElement(node) {
-            if (!layer || !transformer) return;
-
-            try {
-                if (node && node.name() === 'background_image') {
-                    // If the selected node is the background image
-                    transformer.nodes([node]);
-                    transformer.moveToTop(); // Ensure transformer is on top
-                    transformer.borderStroke('#FFFF00'); // Yellow border for background
-                    transformer.anchorStroke('#FFFF00'); // Yellow anchors
-                    transformer.anchorFill('#FFFF00');
-                    lastSelectedNode = node; // Track last selected node
-                } else if (node) {
-                    // If the selected node is a regular media element
-                    transformer.nodes([node]);
-                    transformer.moveToTop(); // Ensure transformer is on top
-                    // Reset transformer color to default green
-                    transformer.borderStroke('#34c759');
-                    transformer.anchorStroke('#34c759');
-                    transformer.anchorFill('#34c759');
-                    lastSelectedNode = node; // Track last selected node
-                } else {
-                    // If no node is selected, clear transformer and reset color
-                    transformer.nodes([]);
-                    transformer.borderStroke('#34c759');
-                    transformer.anchorStroke('#34c759');
-                    transformer.anchorFill('#34c759');
-                    // Don't clear lastSelectedNode when deselecting
-                }
-                layer.draw(); // Draw the main layer which contains the transformer
-            }
-            catch (e) {
-                console.error('Error updating active element:', e);
-            }
-        }
-
-        // Helper function to get the target node for animations
-        function getTargetNode() {
-            const currentlySelected = transformer.nodes()[0];
-            const target = currentlySelected || lastSelectedNode;
-            console.log('getTargetNode called - currently selected:', currentlySelected, 'last selected:', lastSelectedNode, 'returning:', target);
-            return target;
-        }
-
-        function validateFile(file) {
-            const maxSize = 50 * 1024 * 1024; // 50MB limit
-            const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/webm', 'video/ogg'];
-            if (file.size > maxSize) {
-                showError(`File "${file.name}" is too large. Maximum size is 50MB.`);
-                return false;
-            }
-            if (!allowedTypes.includes(file.type)) {
-                // For folder uploads, we might encounter other file types, just skip them silently
-                return false;
-            }
-            return true;
-        }
-
-        // Helper to load an image and return an Image object
-        function loadImageElement(src) {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.onload = () => resolve(img);
-                img.onerror = (e) => reject(new Error(`Failed to load image element from ${src}: ${e.message}`));
-                img.src = src;
-            });
-        }
-
-        // Helper to create and prepare a video element
-        function createVideoElement(src) {
-            return new Promise((resolve, reject) => {
-                const videoElement = document.createElement('video');
-                videoElement.src = src;
-                videoElement.loop = true;
-                videoElement.muted = true;
-                videoElement.setAttribute('webkit-playsinline', 'webkit-playsinline');
-                videoElement.setAttribute('playsinline', 'playsinline');
-                videoElement.style.display = 'none'; // Keep it hidden from direct DOM
-                
-                // Append to body immediately so it can start loading/playing
-                document.body.appendChild(videoElement);
-
-                // Wait for metadata to be loaded before considering it "ready" for Konva
-                videoElement.onloadedmetadata = () => {
-                    // Once metadata is loaded, Konva can use it.
-                    // Start playing immediately if possible.
-                    videoElement.play().catch(e => console.warn("Video autoplay prevented:", e));
-                    resolve(videoElement);
+                // DOM Elements (cached for performance)
+                this.elements = {
+                    container: document.getElementById('container'),
+                    toolbar: document.getElementById('toolbar'),
+                    loadingIndicator: document.getElementById('loadingIndicator'),
+                    folderLoadingIndicator: document.getElementById('folderLoadingIndicator'),
+                    folderLoadingCount: document.getElementById('folderLoadingCount'),
+                    folderLoadingTotal: document.getElementById('folderLoadingTotal'),
+                    folderLoadingProgress: document.getElementById('folderLoadingProgress'),
+                    errorMessage: document.getElementById('errorMessage'),
+                    fileInput: document.getElementById('file-input'),
+                    folderInput: document.getElementById('folder-input'),
+                    backgroundImageInput: document.getElementById('background-image-input'),
+                    foregroundImageInput: document.getElementById('foreground-image-input'),
+                    assetsPanel: document.getElementById('assetsPanel'),
+                    assetsPanelToggle: document.getElementById('assetsPanelToggle'),
+                    assetsList: document.getElementById('assetsList'),
+                    backgroundAssetsList: document.getElementById('backgroundAssetsList'),
+                    foregroundAssetsList: document.getElementById('foregroundAssetsList'),
+                    textPopup: document.getElementById('textPopup'),
+                    textPopupTitleBar: document.getElementById('textPopupTitleBar'),
+                    popupTextInput: document.getElementById('popupTextInput'),
+                    colorPicker: document.getElementById('colorPicker'),
+                    fontPicker: document.getElementById('fontPicker'),
+                    fontSizeSlider: document.getElementById('fontSizeSlider'),
+                    fontSizeValue: document.getElementById('fontSizeValue'),
+                    textPreview: document.getElementById('textPreview'),
+                    animationSettingsMenu: document.getElementById('animationSettingsMenu'),
+                    shakeSpeedSlider: document.getElementById('shakeSpeed'),
+                    shakeSpeedValueDisplay: document.getElementById('shakeSpeedValue'),
+                    shakeRepetitionsInput: document.getElementById('shakeRepetitions'),
+                    shakeDistanceSlider: document.getElementById('shakeDistance'),
+                    shakeDistanceValueDisplay: document.getElementById('shakeDistanceValue'),
+                    circleSpeedSlider: document.getElementById('circleSpeed'),
+                    circleSpeedValueDisplay: document.getElementById('circleSpeedValue'),
+                    circleRepetitionsInput: document.getElementById('circleRepetitions'),
+                    circleRadiusSlider: document.getElementById('circleRadius'),
+                    circleRadiusValueDisplay: document.getElementById('circleRadiusValue'),
+                    flipSpeedSlider: document.getElementById('flipSpeed'),
+                    flipSpeedValueDisplay: document.getElementById('flipSpeedValue'),
+                    flipRepetitionsInput: document.getElementById('flipRepetitions'),
                 };
-                videoElement.onerror = (e) => {
-                    console.error("Video element loading error:", e);
-                    reject(new Error(`Failed to load video element from ${src}`));
-                };
-            });
-        }
+            }
 
-        // --- GLOBAL FUNCTIONS FOR EVENT LISTENERS ---
-
-        /**
-         * Handles files selected from the file input (single or multiple).
-         * @param {FileList} files - The FileList object from the input.
-         */
-        async function handleFiles(files) {
-            if (!files || files.length === 0) return;
-            for (const file of Array.from(files)) {
-                if (!validateFile(file)) continue;
-                showLoading(); // Show loading for each file
+            /**
+             * Initializes the Konva stage, layers, and attaches all event listeners.
+             */
+            init() {
                 try {
+                    this.stage = new Konva.Stage({
+                        container: this.elements.container.id,
+                        width: window.innerWidth - this.elements.toolbar.offsetWidth,
+                        height: window.innerHeight,
+                    });
+
+                    this.backgroundLayer = new Konva.Layer();
+                    this.stage.add(this.backgroundLayer);
+
+                    this.layer = new Konva.Layer(); // Main content layer
+                    this.stage.add(this.layer);
+
+                    this.foregroundLayer = new Konva.Layer();
+                    this.stage.add(this.foregroundLayer);
+
+                    this.transformer = new Konva.Transformer({
+                        nodes: [],
+                        centeredScaling: false,
+                        enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
+                        borderStroke: '#34c759',
+                        borderStrokeWidth: 2,
+                        anchorStroke: '#34c759',
+                        anchorFill: '#34c759',
+                        anchorSize: 12,
+                        rotateEnabled: true,
+                        rotationSnaps: [0, 90, 180, 270],
+                        keepRatio: true,
+                    });
+                    this.layer.add(this.transformer);
+
+                    this.addEventListeners();
+                    console.log('Gaze Tracker Canvas initialized successfully');
+                } catch (e) {
+                    console.error('Error initializing app:', e);
+                    this.showError('Failed to initialize application');
+                }
+            }
+
+            /**
+             * Attaches all DOM and Konva event listeners.
+             */
+            addEventListeners() {
+                // Konva Stage Events
+                this.stage.on('click tap', this.handleStageClick.bind(this));
+
+                // File Input Buttons
+                document.getElementById('file-input-button').addEventListener('click', () => this.elements.fileInput.click());
+                document.getElementById('folder-input-button').addEventListener('click', () => this.elements.folderInput.click());
+                document.getElementById('setBackgroundImage').addEventListener('click', () => this.elements.backgroundImageInput.click());
+                
+                // Set Foreground Image button now ONLY triggers the file input.
+                document.getElementById('setForegroundImage').addEventListener('click', () => this.elements.foregroundImageInput.click());
+
+                // File Input Change Handlers
+                this.elements.fileInput.addEventListener('change', (e) => this.handleFiles(e.target.files));
+                this.elements.folderInput.addEventListener('change', (e) => this.handleFolderFiles(e.target.files));
+                this.elements.backgroundImageInput.addEventListener('change', (e) => this.handleBackgroundImage(e.target.files));
+                
+                // This listener correctly processes the selected file.
+                this.elements.foregroundImageInput.addEventListener('change', (e) => {
+                    if (e.target.files.length > 0) {
+                        this.processAndSetForegroundImage(e.target.files[0]);
+                    }
+                });
+
+                // Fullscreen Toggle
+                this.elements.toolbar.querySelector('#fullscreenToggle').addEventListener('click', this.toggleFullscreen.bind(this));
+                document.addEventListener('fullscreenchange', this.updateFullscreenButton.bind(this));
+
+                // Toolbar Action Buttons
+                document.getElementById('increaseSize').addEventListener('click', this.increaseSize.bind(this));
+                document.getElementById('decreaseSize').addEventListener('click', this.decreaseSize.bind(this));
+                document.getElementById('deleteItem').addEventListener('click', this.deleteSelectedItem.bind(this));
+                document.getElementById('moveUp').addEventListener('click', this.moveLayerUp.bind(this));
+                document.getElementById('moveDown').addEventListener('click', this.moveLayerDown.bind(this));
+                document.getElementById('shakeButton').addEventListener('click', this.applyShakeAnimation.bind(this));
+                document.getElementById('circleButton').addEventListener('click', this.applyCircleAnimation.bind(this));
+                document.getElementById('flipButton').addEventListener('click', this.applyFlipAnimation.bind(this));
+                document.getElementById('animationSettings').addEventListener('click', this.showAnimationSettings.bind(this));
+
+                // Theme Color Swatches
+                document.querySelectorAll('.color-swatch').forEach(swatch => {
+                    swatch.addEventListener('click', (e) => this.changeBackgroundColor(e.target.dataset.color));
+                });
+
+                // Hotkey Listener
+                document.addEventListener('keydown', this.handleHotkeys.bind(this));
+
+                // Text Popup Functionality
+                document.getElementById('addText').addEventListener('click', this.showTextPopup.bind(this));
+                document.getElementById('cancelTextButton').addEventListener('click', () => this.elements.textPopup.style.display = 'none');
+                this.elements.popupTextInput.addEventListener('input', this.updateTextPreview.bind(this));
+                this.elements.colorPicker.addEventListener('input', this.updateTextPreview.bind(this));
+                this.elements.fontPicker.addEventListener('change', this.updateTextPreview.bind(this));
+                this.elements.fontSizeSlider.addEventListener('input', () => {
+                    this.elements.fontSizeValue.textContent = `${this.elements.fontSizeSlider.value}px`;
+                    this.updateTextPreview();
+                });
+                document.getElementById('addTextButton').addEventListener('click', this.addTextToCanvas.bind(this));
+                this.makeTextPopupDraggable();
+
+                // Assets Panel Toggle
+                this.elements.assetsPanelToggle.addEventListener('click', this.toggleAssetsPanel.bind(this));
+
+                // Drag and Drop for Assets Panel
+                this.elements.assetsList.addEventListener('dragstart', this.handleAssetDragStart.bind(this));
+                this.elements.backgroundAssetsList.addEventListener('dragstart', this.handleAssetDragStart.bind(this));
+                this.elements.foregroundAssetsList.addEventListener('dragstart', this.handleAssetDragStart.bind(this));
+                this.elements.container.addEventListener('dragover', this.handleDragOver.bind(this));
+                this.elements.container.addEventListener('dragleave', this.handleDragLeave.bind(this));
+                this.elements.container.addEventListener('drop', this.handleDrop.bind(this));
+
+                // Animation Settings Menu Controls
+                document.getElementById('closeAnimationSettings').addEventListener('click', () => this.elements.animationSettingsMenu.style.display = 'none');
+                document.getElementById('saveAnimationSettings').addEventListener('click', this.saveAnimationSettings.bind(this));
+                this.elements.shakeSpeedSlider.addEventListener('input', (e) => this.elements.shakeSpeedValueDisplay.textContent = `${e.target.value}x`);
+                this.elements.shakeDistanceSlider.addEventListener('input', (e) => this.elements.shakeDistanceValueDisplay.textContent = `${e.target.value}px`);
+                this.elements.circleSpeedSlider.addEventListener('input', (e) => this.elements.circleSpeedValueDisplay.textContent = `${e.target.value}x`);
+                this.elements.circleRadiusSlider.addEventListener('input', (e) => this.elements.circleRadiusValueDisplay.textContent = `${e.target.value}px`);
+                this.elements.flipSpeedSlider.addEventListener('input', (e) => this.elements.flipSpeedValueDisplay.textContent = `${e.target.value}x`);
+                
+                // Window Resize Listener
+                window.addEventListener('resize', this.resizeStage.bind(this));
+
+                // Cleanup on unload
+                window.addEventListener('beforeunload', this.cleanup.bind(this));
+            }
+
+            /**
+             * Handles clicks on the Konva stage to deselect items.
+             * @param {Konva.KonvaEventObject<MouseEvent>} e - The Konva click event.
+             */
+            handleStageClick(e) {
+                // If clicked on the stage background itself or a non-interactive layer
+                if (e.target === this.stage || e.target === this.layer || e.target === this.backgroundLayer || e.target === this.foregroundLayer) {
+                    this.transformer.nodes([]);
+                    this.layer.draw();
+                }
+            }
+
+            /** Utility Functions **/
+
+            showLoading() {
+                this.elements.loadingIndicator.style.display = 'block';
+            }
+
+            hideLoading() {
+                this.elements.loadingIndicator.style.display = 'none';
+            }
+
+            showFolderLoading(current, total) {
+                this.elements.folderLoadingIndicator.style.display = 'block';
+                this.elements.folderLoadingCount.textContent = current;
+                this.elements.folderLoadingTotal.textContent = total;
+                const percentage = total > 0 ? (current / total) * 100 : 0;
+                this.elements.folderLoadingProgress.style.width = percentage + '%';
+            }
+
+            hideFolderLoading() {
+                this.elements.folderLoadingIndicator.style.display = 'none';
+            }
+
+            showShortcutFeedback(message) {
+                let feedback = document.getElementById('shortcutFeedback');
+                if (!feedback) {
+                    feedback = document.createElement('div');
+                    feedback.id = 'shortcutFeedback';
+                    feedback.style.cssText = `
+                        position: fixed;
+                        top: 20px;
+                        left: 50%;
+                        transform: translateX(-50%);
+                        background: rgba(52, 199, 89, 0.9);
+                        color: white;
+                        padding: 8px 16px;
+                        border-radius: 6px;
+                        font-size: 12px;
+                        font-weight: 600;
+                        z-index: 2001;
+                        opacity: 0;
+                        transition: opacity 0.3s ease;
+                        pointer-events: none;
+                    `;
+                    document.body.appendChild(feedback);
+                }
+                feedback.textContent = message;
+                feedback.style.opacity = '1';
+                if (feedback.hideTimeout) {
+                    clearTimeout(feedback.hideTimeout);
+                }
+                feedback.hideTimeout = setTimeout(() => {
+                    feedback.style.opacity = '0';
+                }, 1500);
+            }
+
+            showError(message) {
+                this.elements.errorMessage.textContent = message;
+                this.elements.errorMessage.style.display = 'block';
+                setTimeout(() => {
+                    this.elements.errorMessage.style.display = 'none';
+                }, 3000);
+            }
+
+            /**
+             * Updates the Konva Transformer based on the selected node.
+             * @param {Konva.Node|null} node - The Konva node to select, or null to deselect.
+             */
+            updateActiveElement(node) {
+                if (!this.layer || !this.transformer) return;
+
+                try {
+                    // Only select fixed layers (background/foreground) if they are explicitly passed and are `listening: true`.
+                    // However, we've set foreground to `listening: false` to allow click-through.
+                    // So, the transformer should only appear on fixed layers if we programmatically select them,
+                    // or if it's the background image which is still `listening: true`.
+                    if (node && (node.name() === 'background_image' || node.name() === 'foreground_image')) {
+                        this.transformer.nodes([node]); // Select the node
+                        this.transformer.moveToTop(); // Ensure transformer is visible
+                        this.transformer.borderStroke('#FFFF00'); // Yellow border for fixed layers
+                        this.transformer.anchorStroke('#FFFF00');
+                        this.transformer.anchorFill('#FFFF00');
+                        this.lastSelectedNode = node; // Keep track for delete, etc.
+                    } else if (node) {
+                        // Regular draggable elements
+                        this.transformer.nodes([node]);
+                        this.transformer.moveToTop();
+                        this.transformer.borderStroke('#34c759'); // Default green for draggable elements
+                        this.transformer.anchorStroke('#34c759');
+                        this.transformer.anchorFill('#34c759');
+                        this.lastSelectedNode = node;
+                    } else {
+                        // Deselect all
+                        this.transformer.nodes([]);
+                        this.transformer.borderStroke('#34c759'); // Reset to default green
+                        this.transformer.anchorStroke('#34c759');
+                        this.transformer.anchorFill('#34c759');
+                    }
+                    this.layer.draw();
+                } catch (e) {
+                    console.error('Error updating active element:', e);
+                }
+            }
+
+            /**
+             * Gets the currently selected node for applying actions like animations.
+             * Prefers the transformer's node, falls back to the last selected.
+             * @returns {Konva.Node|null} The target Konva node.
+             */
+            getTargetNode() {
+                const currentlySelected = this.transformer.nodes()[0];
+                return currentlySelected || this.lastSelectedNode;
+            }
+
+            /** File Handling Utilities **/
+
+            validateFile(file) {
+                const maxSize = 50 * 1024 * 1024; // 50MB limit
+                const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/webm', 'video/ogg'];
+                if (file.size > maxSize) {
+                    this.showError(`File "${file.name}" is too large. Maximum size is 50MB.`);
+                    return false;
+                }
+                if (!allowedTypes.includes(file.type)) {
+                    return false; // Silently skip unsupported types in folder uploads
+                }
+                return true;
+            }
+
+            loadImageElement(src) {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    img.onload = () => resolve(img);
+                    img.onerror = (e) => reject(new Error(`Failed to load image element from ${src}: ${e.message}`));
+                    img.src = src;
+                });
+            }
+
+            createVideoElement(src) {
+                return new Promise((resolve, reject) => {
+                    const videoElement = document.createElement('video');
+                    videoElement.src = src;
+                    videoElement.loop = true;
+                    videoElement.muted = true;
+                    videoElement.setAttribute('webkit-playsinline', 'webkit-playsinline');
+                    videoElement.setAttribute('playsinline', 'playsinline');
+                    videoElement.style.display = 'none';
+                    document.body.appendChild(videoElement);
+
+                    videoElement.onloadedmetadata = () => {
+                        videoElement.play().catch(e => console.warn("Video autoplay prevented:", e));
+                        resolve(videoElement);
+                    };
+                    videoElement.onerror = (e) => {
+                        console.error("Video element loading error:", e);
+                        reject(new Error(`Failed to load video element from ${src}`));
+                    };
+                });
+            }
+            // Removed createImageFromCharacter function as it's no longer needed.
+
+            /** File Input Handlers **/
+
+            async handleFiles(files) {
+                if (!files || files.length === 0) return;
+                for (const file of Array.from(files)) {
+                    if (!this.validateFile(file)) continue;
+                    this.showLoading();
+                    try {
+                        const dataUrl = await new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = (e) => resolve(e.target.result);
+                            reader.onerror = reject;
+                            reader.readAsDataURL(file);
+                        });
+                        const uniqueId = `${file.type.split('/')[0]}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+                        if (file.type.startsWith('image/')) {
+                            const img = await this.loadImageElement(dataUrl);
+                            this.addToAssetsPanel(img, uniqueId, file.type.includes('gif') ? 'gif' : 'image');
+                        } else if (file.type.startsWith('video/')) {
+                            const videoElement = await this.createVideoElement(dataUrl);
+                            this.addToAssetsPanel(videoElement, uniqueId, 'video'); 
+                        }
+                        this.hideLoading();
+                    } catch (error) {
+                        this.hideLoading();
+                        this.showError(`Failed to load "${file.name}": ${error.message}`);
+                    }
+                }
+            }
+
+            async handleFolderFiles(files) {
+                if (!files || files.length === 0) {
+                    this.showError('No files selected in folder.');
+                    return;
+                }
+
+                const validFiles = Array.from(files).filter(file => this.validateFile(file));
+                if (validFiles.length === 0) {
+                    this.showError('No valid image or video files found in the selected folder.');
+                    this.hideFolderLoading();
+                    return;
+                }
+
+                let loadedCount = 0;
+                this.showFolderLoading(loadedCount, validFiles.length);
+
+                for (const file of validFiles) {
+                    try {
+                        const dataUrl = await new Promise((resolve, reject) => {
+                            const reader = new FileReader();
+                            reader.onload = (e) => resolve(e.target.result);
+                            reader.onerror = reject;
+                            reader.readAsDataURL(file);
+                        });
+                        const uniqueId = `${file.type.split('/')[0]}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+                        if (file.type.startsWith('image/')) {
+                            const img = await this.loadImageElement(dataUrl);
+                            this.addToAssetsPanel(img, uniqueId, file.type.includes('gif') ? 'gif' : 'image');
+                        } else if (file.type.startsWith('video/')) {
+                            const videoElement = await this.createVideoElement(dataUrl);
+                            this.addToAssetsPanel(videoElement, uniqueId, 'video');
+                        }
+                    } catch (error) {
+                        console.error('Error processing file from folder:', file.name, error);
+                        this.showError(`Failed to load "${file.name}" from folder.`);
+                    } finally {
+                        loadedCount++;
+                        this.showFolderLoading(loadedCount, validFiles.length);
+                    }
+                }
+                this.hideFolderLoading();
+            }
+
+            handleBackgroundImage(files) {
+                if (!files || files.length === 0) return;
+                const file = files[0];
+                if (!file.type.startsWith('image/')) {
+                    this.showError('Please select an image file for the background.');
+                    return;
+                }
+
+                this.showLoading();
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        this.hideLoading();
+                        const uniqueId = 'bg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                        this.addToBackgroundAssetsPanel(img, uniqueId, 'background');
+                        this.drawBackground(img, uniqueId); // Draw directly to canvas
+                        this.showShortcutFeedback('Background image set');
+                    };
+                    img.onerror = () => {
+                        this.hideLoading();
+                        this.showError('Failed to load background image.');
+                    };
+                    img.src = e.target.result;
+                };
+                reader.onerror = () => {
+                    this.hideLoading();
+                    this.showError('Failed to read background image file.');
+                };
+                reader.readAsDataURL(file);
+            }
+
+            /**
+             * Processes and sets a foreground image from a file.
+             * @param {File} file The file object.
+             */
+            async processAndSetForegroundImage(file) {
+                this.showLoading();
+                let img;
+                let uniqueId;
+                let assetType;
+
+                try {
+                    if (!file || !file.type.startsWith('image/')) {
+                        this.showError('Please select an image file for the foreground.');
+                        this.hideLoading();
+                        return;
+                    }
                     const dataUrl = await new Promise((resolve, reject) => {
                         const reader = new FileReader();
                         reader.onload = (e) => resolve(e.target.result);
                         reader.onerror = reject;
                         reader.readAsDataURL(file);
                     });
-                    const uniqueId = `${file.type.split('/')[0]}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    img = await this.loadImageElement(dataUrl);
+                    uniqueId = 'fg_file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+                    assetType = 'foreground_image_file';
 
-                    if (file.type.startsWith('image/')) {
-                        const img = await loadImageElement(dataUrl); // Use new helper
-                        addToAssetsPanel(img, uniqueId, file.type.includes('gif') ? 'gif' : 'image');
-                    } else if (file.type.startsWith('video/')) {
-                        const videoElement = await createVideoElement(dataUrl); // Use new helper
-                        addToAssetsPanel(videoElement, uniqueId, 'video'); 
-                    }
-                    hideLoading(); // Hide after successful processing of *this* file
+                    this.hideLoading();
+                    // Add to assets panel
+                    this.addToForegroundAssetsPanel(img, uniqueId, assetType);
+                    // Draw directly on the canvas as a fixed foreground layer
+                    this.drawForeground(img, uniqueId); 
+                    this.showShortcutFeedback('Foreground image added to library and set'); 
                 } catch (error) {
-                    hideLoading();
-                    showError(`Failed to load "${file.name}": ${error.message}`);
+                    this.hideLoading();
+                    this.showError('Failed to set foreground image: ' + error.message);
                 }
             }
-        }
 
-        /**
-         * Handles files selected from a folder input.
-         * @param {FileList} files - The FileList object from the input.
-         */
-        async function handleFolderFiles(files) {
-            if (!files || files.length === 0) {
-                showError('No files selected in folder.');
-                return;
+
+            /** Konva Drawing Functions **/
+
+            drawBackground(img, uniqueId) {
+                this.backgroundLayer.destroyChildren();
+
+                const stageWidth = this.stage.width();
+                const stageHeight = this.stage.height();
+
+                const scaleX = stageWidth / img.width;
+                const scaleY = stageHeight / img.height;
+                const scale = Math.max(scaleX, scaleY);
+
+                const newWidth = img.width * scale;
+                const newHeight = img.height * scale;
+
+                const x = (stageWidth - newWidth) / 2;
+                const y = (stageHeight - newHeight) / 2;
+
+                this.currentBackgroundNode = new Konva.Image({
+                    image: img,
+                    x: x,
+                    y: y,
+                    width: newWidth,
+                    height: newHeight,
+                    draggable: false, // Fixed layer, not draggable by mouse
+                    listening: true, // Background can be clicked to select
+                    name: 'background_image',
+                    id: uniqueId
+                });
+
+                this.currentBackgroundNode.on('click tap', () => this.updateActiveElement(this.currentBackgroundNode));
+                this.currentBackgroundNode.on('transformend', () => {
+                    // This transformend event handler will likely not fire if draggable is false,
+                    // but keeping it for completeness in case it's used for programmatic transforms.
+                    this.resizeStage();
+                    this.backgroundLayer.draw();
+                });
+
+                this.backgroundLayer.add(this.currentBackgroundNode);
+                this.backgroundLayer.draw();
+                this.updateActiveElement(this.currentBackgroundNode);
             }
 
-            const validFiles = Array.from(files).filter(validateFile);
-            if (validFiles.length === 0) {
-                showError('No valid image or video files found in the selected folder.');
-                hideFolderLoading();
-                return;
+            drawForeground(img, uniqueId) {
+                this.foregroundLayer.destroyChildren();
+
+                const stageWidth = this.stage.width();
+                const stageHeight = this.stage.height();
+
+                const scaleX = stageWidth / img.width;
+                const scaleY = stageHeight / img.height;
+                const scale = Math.max(scaleX, scaleY);
+
+                const newWidth = img.width * scale;
+                const newHeight = img.height * scale;
+
+                const x = (stageWidth - newWidth) / 2;
+                const y = (stageHeight - newHeight) / 2;
+
+                this.currentForegroundNode = new Konva.Image({
+                    image: img,
+                    x: x,
+                    y: y,
+                    width: newWidth,
+                    height: newHeight,
+                    draggable: false, // Fixed layer, not draggable
+                    listening: false, // IMPORTANT: Allows clicks to pass through to layers below
+                    name: 'foreground_image',
+                    id: uniqueId
+                });
+
+                // Removed click tap listener as it will not respond to mouse events
+                // this.currentForegroundNode.on('click tap', () => this.updateActiveElement(this.currentForegroundNode)); 
+                this.currentForegroundNode.on('transformend', () => {
+                     // This transformend event handler will likely not fire if draggable is false,
+                    // but keeping it for completeness in case it's used for programmatic transforms.
+                    this.resizeStage();
+                    this.foregroundLayer.draw();
+                });
+
+                this.foregroundLayer.add(this.currentForegroundNode);
+                this.foregroundLayer.draw();
+                // Removed updateActiveElement call to prevent automatic selection on creation
+                // this.updateActiveElement(this.currentForegroundNode); 
             }
 
-            let loadedCount = 0;
-            showFolderLoading(loadedCount, validFiles.length);
-
-            for (const file of validFiles) {
-                try {
-                    const dataUrl = await new Promise((resolve, reject) => {
-                        const reader = new FileReader();
-                        reader.onload = (e) => resolve(e.target.result);
-                        reader.onerror = reject;
-                        reader.readAsDataURL(file);
-                    });
-                    const uniqueId = `${file.type.split('/')[0]}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
-                    if (file.type.startsWith('image/')) {
-                        const img = await loadImageElement(dataUrl); // Use new helper
-                        addToAssetsPanel(img, uniqueId, file.type.includes('gif') ? 'gif' : 'image');
-                    } else if (file.type.startsWith('video/')) {
-                        const videoElement = await createVideoElement(dataUrl); // Use new helper
-                        addToAssetsPanel(videoElement, uniqueId, 'video');
-                    }
-                } catch (error) {
-                    console.error('Error processing file from folder:', file.name, error);
-                    showError(`Failed to load "${file.name}" from folder.`);
-                } finally {
-                    loadedCount++;
-                    showFolderLoading(loadedCount, validFiles.length);
-                }
-            }
-            hideFolderLoading();
-        }
-
-        /**
-         * Handles a background image file selected from the input.
-         * @param {FileList} files - The FileList object from the input.
-         */
-        function handleBackgroundImage(files) {
-            if (!files || files.length === 0) return;
-            const file = files[0];
-            if (!file.type.startsWith('image/')) {
-                showError('Please select an image file for the background.');
-                return;
-            }
-
-            showLoading();
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const img = new Image();
-                img.onload = function() {
-                    hideLoading();
-                    const uniqueId = 'bg_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-                    addToBackgroundAssetsPanel(img, uniqueId, 'background'); // Add to background assets panel
-                    // No direct drawing here, it's dragged from the panel now
-                };
-                img.onerror = function() {
-                    hideLoading();
-                    showError('Failed to load background image.');
-                };
-                img.src = e.target.result;
-            };
-            reader.onerror = function() {
-                hideLoading();
-                showError('Failed to read background image file.');
-            };
-            reader.readAsDataURL(file);
-        }
-
-        // --- KONVA DRAWING FUNCTIONS ---
-
-        /**
-         * Draws a background image on the dedicated background layer.
-         * @param {HTMLImageElement} img - The loaded Image element.
-         * @param {string} uniqueId - A unique ID for the Konva node.
-         */
-        function drawBackground(img, uniqueId) {
-            backgroundLayer.destroyChildren(); // Clear existing background
-
-            const stageWidth = stage.width();
-            const stageHeight = stage.height();
-
-            // Calculate scale to make the lesser dimension fill the screen, maintaining aspect ratio
-            const scaleX = stageWidth / img.width;
-            const scaleY = stageHeight / img.height;
-            const scale = Math.max(scaleX, scaleY); // Use Math.max to ensure the image covers the canvas
-
-            const newWidth = img.width * scale;
-            const newHeight = img.height * scale;
-
-            // Center the image (it might overflow)
-            const x = (stageWidth - newWidth) / 2;
-            const y = (stageHeight - newHeight) / 2;
-
-            const backgroundImage = new Konva.Image({
-                image: img,
-                x: x,
-                y: y,
-                width: newWidth,
-                height: newHeight,
-                listening: true, // Make background interactive
-                name: 'background_image', // Name to easily identify background
-                id: uniqueId // Assign a unique ID
-            });
-
-            // Add event listener for clicking the background image
-            backgroundImage.on('click tap', () => updateActiveElement(backgroundImage));
-            backgroundImage.on('transformend', () => {
-                // Recalculate size/position if transformed (though it shouldn't be directly transformable in practice)
-                resizeStage(); // This should handle the scaling logic
-                layer.draw();
-            });
-
-            backgroundLayer.add(backgroundImage);
-            backgroundLayer.draw();
-
-            // Store reference to the current background node
-            currentBackgroundNode = backgroundImage;
-            
-            // Add to mediaElements for consistent management (especially deletion)
-            mediaElements.set(backgroundImage.id(), backgroundImage);
-
-            // After drawing, select it to show its bounding box
-            updateActiveElement(backgroundImage);
-        }
-
-        /**
-         * Draws a static image on the main layer.
-         * @param {HTMLImageElement} image - The loaded Image element.
-         * @param {number} x - X coordinate for the center of the image.
-         * @param {number} y - Y coordinate for the center of the image.
-         * @param {string} uniqueId - A unique ID for the Konva node.
-         */
-        function drawImage(image, x, y, uniqueId) { 
-5            // Get available canvas dimensions and center coordinates
-            const maxWidth = stage.width() * 0.9; // 90% of canvas width
-            const maxHeight = stage.height() * 0.9; // 90% of canvas height
-            const centerX = stage.width() / 2;
-            const centerY = stage.height() / 2;
-            
-            // Calculate scale to fit within canvas bounds while maintaining aspect ratio
-            const scaleX = maxWidth / image.width;
-            const scaleY = maxHeight / image.height;
-            const scale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down if needed
-            
-            const finalWidth = image.width * scale;
-            const finalHeight = image.height * scale;
-
-            const konvaImage = new Konva.Image({
-                image: image,
-                x: centerX - finalWidth / 2,
-                y: centerY - finalHeight / 2,
-                width: finalWidth,
-                height: finalHeight,
-                draggable: true,
-                id: uniqueId, // Explicitly set the ID
-            });
-            layer.add(konvaImage);
-            konvaImage.on('click tap', () => updateActiveElement(konvaImage));
-            konvaImage.on('transformend', () => layer.draw());
-            mediaElements.set(konvaImage.id(), konvaImage); // Use konvaImage.id()
-            layer.draw();
-            updateActiveElement(konvaImage);
-            return konvaImage;
-        }
-
-        /**
-         * Draws an animated GIF on the main layer.
-         * @param {HTMLImageElement} image - The initial loaded Image element.
-         * @param {number} x - X coordinate for the center of the GIF.
-         * @param {number} y - Y coordinate for the center of the GIF.
-         * @param {string} src - The data URL of the GIF.
-         * @param {string} uniqueId - A unique ID for the Konva node.
-         */
-        function drawAnimatedGif(image, x, y, src, uniqueId) {
-            // Use an invisible img tag to decode the GIF frames
-            const gifImageElement = document.createElement('img');
-            gifImageElement.src = src;
-            gifImageElement.style.position = 'absolute';
-            gifImageElement.style.left = '-9999px';
-            gifImageElement.style.top = '-9999px';
-            gifImageElement.style.visibility = 'hidden';
-            gifImageElement.style.pointerEvents = 'none'; // Corrected property name from pointer-events
-            document.getElementById('gif-container').appendChild(gifImageElement);
-
-            gifler(src).frames(function (frames, ctrl) {
-                // Get available canvas dimensions and center coordinates
-                const maxWidth = stage.width() * 0.9; // 90% of canvas width
-                const maxHeight = stage.height() * 0.9; // 90% of canvas height
-                const centerX = stage.width() / 2;
-                const centerY = stage.height() / 2;
+            drawImage(image, x, y, uniqueId) { 
+                const maxWidth = this.stage.width() * 0.9;
+                const maxHeight = this.stage.height() * 0.9;
+                const centerX = this.stage.width() / 2;
+                const centerY = this.stage.height() / 2;
                 
-                // Calculate scale to fit within canvas bounds while maintaining aspect ratio
-                const scaleX = maxWidth / frames[0].image.width;
-                const scaleY = maxHeight / frames[0].image.height;
-                const scale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down if needed
+                const scaleX = maxWidth / image.width;
+                const scaleY = maxHeight / image.height;
+                const scale = Math.min(scaleX, scaleY, 1);
                 
-                const finalWidth = frames[0].image.width * scale;
-                const finalHeight = frames[0].image.height * scale;
+                const finalWidth = image.width * scale;
+                const finalHeight = image.height * scale;
 
-                const konvaGif = new Konva.Image({
-                    image: frames[0].image,
+                const konvaImage = new Konva.Image({
+                    image: image,
                     x: centerX - finalWidth / 2,
                     y: centerY - finalHeight / 2,
                     width: finalWidth,
                     height: finalHeight,
                     draggable: true,
-                    id: uniqueId, // Explicitly set the ID
-                    // Store reference to gifler control to stop/start animation
-                    gifCtrl: ctrl
+                    id: uniqueId,
+                });
+                this.layer.add(konvaImage);
+                konvaImage.on('click tap', () => this.updateActiveElement(konvaImage));
+                konvaImage.on('transformend', () => this.layer.draw());
+                this.mediaElements.set(konvaImage.id(), konvaImage);
+                this.layer.draw();
+                this.updateActiveElement(konvaImage);
+            }
+
+            drawAnimatedGif(image, x, y, src, uniqueId) {
+                const gifImageElement = document.createElement('img');
+                gifImageElement.src = src;
+                gifImageElement.style.position = 'absolute';
+                gifImageElement.style.left = '-9999px';
+                gifImageElement.style.top = '-9999px';
+                gifImageElement.style.visibility = 'hidden';
+                gifImageElement.style.pointerEvents = 'none';
+                document.getElementById('gif-container').appendChild(gifImageElement);
+
+                gifler(src).frames((frames, ctrl) => {
+                    const maxWidth = this.stage.width() * 0.9;
+                    const maxHeight = this.stage.height() * 0.9;
+                    const centerX = this.stage.width() / 2;
+                    const centerY = this.stage.height() / 2;
+                    
+                    const scaleX = maxWidth / frames[0].image.width;
+                    const scaleY = maxHeight / frames[0].image.height;
+                    const scale = Math.min(scaleX, scaleY, 1);
+                    
+                    const finalWidth = frames[0].image.width * scale;
+                    const finalHeight = frames[0].image.height * scale;
+
+                    const konvaGif = new Konva.Image({
+                        image: frames[0].image,
+                        x: centerX - finalWidth / 2,
+                        y: centerY - finalHeight / 2,
+                        width: finalWidth,
+                        height: finalHeight,
+                        draggable: true,
+                        id: uniqueId,
+                        gifCtrl: ctrl
+                    });
+
+                    this.layer.add(konvaGif);
+                    konvaGif.on('click tap', () => this.updateActiveElement(konvaGif));
+                    konvaGif.on('transformend', () => this.layer.draw());
+                    this.mediaElements.set(konvaGif.id(), konvaGif);
+                    this.layer.draw();
+                    this.updateActiveElement(konvaGif);
+
+                    this.activeGifAnimations.set(konvaGif.id(), ctrl);
+
+                    let frameIndex = 0;
+                    const animateGif = () => {
+                        const frame = frames[frameIndex];
+                        konvaGif.image(frame.image);
+                        this.layer.draw();
+
+                        frameIndex = (frameIndex + 1) % frames.length;
+                        konvaGif.gifAnimationId = setTimeout(animateGif, frame.delay);
+                    };
+                    konvaGif.gifAnimationId = setTimeout(animateGif, frames[0].delay);
+                });
+            }
+
+            drawVideo(videoElement, x, y, uniqueId) { 
+                const maxWidth = this.stage.width() * 0.9;
+                const maxHeight = this.stage.height() * 0.9;
+                const centerX = this.stage.width() / 2;
+                const centerY = this.stage.height() / 2;
+
+                const aspectRatio = videoElement.videoWidth / videoElement.videoHeight;
+                
+                let width = videoElement.videoWidth;
+                let height = videoElement.videoHeight;
+
+                if (width > maxWidth) {
+                    width = maxWidth;
+                    height = maxWidth / aspectRatio;
+                }
+                if (height > maxHeight) {
+                    height = maxHeight;
+                    width = maxHeight * aspectRatio;
+                }
+
+                const konvaVideo = new Konva.Image({
+                    image: videoElement,
+                    x: centerX - width / 2,
+                    y: centerY - height / 2,
+                    width: width,
+                    height: height,
+                    draggable: true,
+                    stroke: 'white',
+                    strokeWidth: 2,
+                    id: uniqueId,
                 });
 
-                layer.add(konvaGif);
-                konvaGif.on('click tap', () => updateActiveElement(konvaGif));
-                konvaGif.on('transformend', () => layer.draw());
-                mediaElements.set(konvaGif.id(), konvaGif); // Use konvaGif.id()
-                layer.draw();
-                updateActiveElement(konvaGif);
+                this.layer.add(konvaVideo);
+                konvaVideo.on('click tap', () => this.updateActiveElement(konvaVideo));
+                konvaVideo.on('transformend', () => this.layer.draw());
+                this.mediaElements.set(konvaVideo.id(), konvaVideo);
+                this.layer.draw();
+                this.updateActiveElement(konvaVideo);
 
-                activeGifAnimations.set(konvaGif.id(), ctrl); // Store the gifler control using konvaGif.id()
+                const videoAnimation = new Konva.Animation(() => {}, this.layer);
+                this.activeAnimations.set(konvaVideo.id(), videoAnimation);
+                videoAnimation.start();
+            }
 
-                let frameIndex = 0;
-                const animateGif = () => {
-                    const frame = frames[frameIndex];
-                    konvaGif.image(frame.image);
-                    layer.draw();
+            addTextNode(text = 'New Text', x, y, fontSize = 24, fill = '#ffffff', fontFamily = 'Arial', uniqueId = 'text_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)) {
+                const textNode = new Konva.Text({
+                    text: text,
+                    x: x,
+                    y: y,
+                    fontSize: fontSize,
+                    fontFamily: fontFamily,
+                    fill: fill,
+                    draggable: true,
+                    width: 200, // Initial width for wrapping
+                    padding: 10,
+                    align: 'center',
+                    id: uniqueId,
+                });
+                this.layer.add(textNode);
+                textNode.on('click tap', () => this.updateActiveElement(textNode));
+                textNode.on('transformend', () => {
+                    // Update width/height based on scaling
+                    textNode.width(textNode.width() * textNode.scaleX());
+                    textNode.height(textNode.height() * textNode.scaleY());
+                    textNode.scaleX(1);
+                    textNode.scaleY(1);
+                    this.layer.draw();
+                });
+                this.mediaElements.set(textNode.id(), textNode);
+                this.layer.draw();
+                this.updateActiveElement(textNode);
+                return textNode;
+            }
 
-                    frameIndex = (frameIndex + 1) % frames.length;
-                    konvaGif.gifAnimationId = setTimeout(animateGif, frame.delay);
+            /** Asset Panel Management **/
+
+            addToAssetsPanel(asset, id, type) {
+                const assetContainer = this.createAssetContainer(asset, id, type, this.elements.assetsList);
+                this.assetCache.set(id, { asset, type, src: asset.src }); 
+                this.openAssetsPanel();
+            }
+
+            addToBackgroundAssetsPanel(asset, id, type) {
+                const assetContainer = this.createAssetContainer(asset, id, type, this.elements.backgroundAssetsList);
+                this.assetCache.set(id, { asset, type, src: asset.src });
+                this.openAssetsPanel();
+            }
+
+            addToForegroundAssetsPanel(asset, id, type) {
+                const assetContainer = this.createAssetContainer(asset, id, type, this.elements.foregroundAssetsList);
+                this.assetCache.set(id, { asset, type, src: asset.src }); 
+                this.openAssetsPanel();
+            }
+
+            createAssetContainer(asset, id, type, parentElement) {
+                const assetContainer = document.createElement('div');
+                assetContainer.className = 'asset-container';
+                assetContainer.draggable = true;
+                assetContainer.dataset.assetId = id;
+                assetContainer.dataset.assetType = type;
+
+                let thumbnailSrc;
+                if (type === 'image' || type === 'gif' || type === 'background' || type === 'foreground_image_file') {
+                    thumbnailSrc = asset.src;
+                } else if (type === 'video') {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 160;
+                    canvas.height = 90;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(asset, 0, 0, canvas.width, canvas.height);
+                    thumbnailSrc = canvas.toDataURL('image/png');
+                } else {
+                    // This should not be reached for any valid asset types now
+                    return null; 
+                }
+
+                if (thumbnailSrc) {
+                    const thumbnail = document.createElement('img');
+                    thumbnail.src = thumbnailSrc;
+                    thumbnail.alt = `Asset Thumbnail ${id}`;
+                    thumbnail.className = 'asset-thumbnail';
+                    assetContainer.appendChild(thumbnail);
+                }
+
+                if (type === 'gif') {
+                    const gifIndicator = document.createElement('span');
+                    gifIndicator.className = 'gif-indicator';
+                    gifIndicator.textContent = 'GIF';
+                    assetContainer.appendChild(gifIndicator);
+                } else if (type === 'video') {
+                    const videoIndicator = document.createElement('span');
+                    videoIndicator.className = 'gif-indicator';
+                    videoIndicator.textContent = 'VIDEO';
+                    videoIndicator.style.backgroundColor = '#007bff';
+                    assetContainer.appendChild(videoIndicator);
+                }
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'asset-delete-btn';
+                deleteBtn.innerHTML = '&times;';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    // Determine if it's a fixed layer (background/foreground) for deletion logic
+                    const isFixedLayer = (type === 'background' || type === 'foreground_image_file');
+                    this.deleteAsset(id, assetContainer, isFixedLayer);
                 };
-                konvaGif.gifAnimationId = setTimeout(animateGif, frames[0].delay);
-            });
-        }
+                assetContainer.appendChild(deleteBtn);
 
-        /**
-         * Draws a video on the main layer.
-         * @param {HTMLVideoElement} videoElement - The prepared HTMLVideoElement.
-         * @param {number} x - X coordinate for the center of the video.
-         * @param {number} y - Y coordinate for the center of the video.
-         * @param {string} uniqueId - A unique ID for the Konva node.
-         */
-        function drawVideo(videoElement, x, y, uniqueId) { 
-            // Get available canvas dimensions and center coordinates
-            const maxWidth = stage.width() * 0.9; // 90% of canvas width
-            const maxHeight = stage.height() * 0.9; // 90% of canvas height
-            const centerX = stage.width() / 2;
-            const centerY = stage.height() / 2;
-
-            // Calculate aspect ratio and constrain to canvas bounds
-            const aspectRatio = videoElement.videoWidth / videoElement.videoHeight;
-            
-            let width = videoElement.videoWidth;
-            let height = videoElement.videoHeight;
-
-            // Scale down if video is larger than available space
-            if (width > maxWidth) {
-                width = maxWidth;
-                height = maxWidth / aspectRatio;
-            }
-            if (height > maxHeight) {
-                height = maxHeight;
-                width = maxHeight * aspectRatio;
+                parentElement.appendChild(assetContainer);
+                return assetContainer;
             }
 
-            const konvaVideo = new Konva.Image({
-                image: videoElement, // Direct use of the HTMLVideoElement
-                x: centerX - width / 2,
-                y: centerY - height / 2,
-                width: width,
-                height: height,
-                draggable: true,
-                stroke: 'white',
-                strokeWidth: 2,
-                id: uniqueId,
-            });
+            deleteAsset(id, element = null, isFixedLayer = false) {
+                const userConfirmed = true; // In a real app, use a custom modal for confirmation
 
-            layer.add(konvaVideo);
-            konvaVideo.on('click tap', () => updateActiveElement(konvaVideo));
-            konvaVideo.on('transformend', () => layer.draw());
-            mediaElements.set(konvaVideo.id(), konvaVideo);
-            layer.draw();
-            updateActiveElement(konvaVideo);
-
-            // Add a simple animation to update the Konva.Image
-            // This animation is not strictly necessary for display but can help
-            // Konva update the video frames if it needs to.
-            const videoAnimation = new Konva.Animation(() => {
-                // No explicit drawing needed here, Konva internally updates video frames
-            }, layer);
-            activeAnimations.set(konvaVideo.id(), videoAnimation);
-            videoAnimation.start();
-        }
-
-        /**
-         * Adds a text node to the main layer.
-         * @param {string} text - The text content.
-         * @param {number} x - X coordinate for the center of the text.
-         * @param {number} y - Y coordinate for the center of the text.
-         * @param {number} fontSize - Font size in pixels.
-         * @param {string} fill - Text color.
-         * @param {string} fontFamily - Font family name.
-         * @param {string} uniqueId - A unique ID for the Konva node.
-         */
-        function addTextNode(text = 'New Text', x, y, fontSize = 24, fill = '#ffffff', fontFamily = 'Arial', uniqueId = 'text_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)) {
-            const textNode = new Konva.Text({
-                text: text,
-                x: x,
-                y: y,
-                fontSize: fontSize,
-                fontFamily: fontFamily,
-                fill: fill,
-                draggable: true,
-                width: 200, // Initial width for wrapping
-                padding: 10,
-                align: 'center',
-                id: uniqueId, // Explicitly set the ID
-            });
-
-            layer.add(textNode);
-            textNode.on('click tap', () => updateActiveElement(textNode));
-            textNode.on('transformend', () => {
-                textNode.width(textNode.width() * textNode.scaleX());
-                textNode.height(textNode.height() * textNode.scaleY());
-                textNode.scaleX(1);
-                textNode.scaleY(1);
-                layer.draw();
-            });
-            mediaElements.set(textNode.id(), textNode); // Use textNode.id()
-            layer.draw();
-            updateActiveElement(textNode);
-            return textNode;
-        }
-
-        // --- ASSET PANEL MANAGEMENT FUNCTIONS ---
-
-        /**
-         * Adds an asset thumbnail to the main assets panel.
-         * @param {HTMLImageElement|HTMLVideoElement} asset - The loaded Image or Video element.
-         * @param {string} id - The unique ID of the asset.
-         * @param {string} type - The type of asset ('image', 'gif', 'video').
-         */
-        function addToAssetsPanel(asset, id, type) {
-            const assetsList = document.getElementById('assetsList');
-            const assetContainer = document.createElement('div');
-            assetContainer.className = 'asset-container';
-            assetContainer.draggable = true;
-            assetContainer.dataset.assetId = id;
-            assetContainer.dataset.assetType = type;
-
-            let thumbnailSrc;
-            if (type === 'image' || type === 'gif') {
-                thumbnailSrc = asset.src;
-            } else if (type === 'video') {
-                // For video, we'll create a canvas thumbnail
-                const canvas = document.createElement('canvas');
-                canvas.width = 160; // Fixed width for thumbnail
-                canvas.height = 90; // Fixed height for thumbnail
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(asset, 0, 0, canvas.width, canvas.height);
-                thumbnailSrc = canvas.toDataURL('image/png');
-            }
-
-            const thumbnail = document.createElement('img');
-            thumbnail.src = thumbnailSrc;
-            thumbnail.alt = `Asset Thumbnail ${id}`;
-            thumbnail.className = 'asset-thumbnail';
-            assetContainer.appendChild(thumbnail);
-
-            if (type === 'gif') {
-                const gifIndicator = document.createElement('span');
-                gifIndicator.className = 'gif-indicator';
-                gifIndicator.textContent = 'GIF';
-                assetContainer.appendChild(gifIndicator);
-            } else if (type === 'video') {
-                const videoIndicator = document.createElement('span');
-                videoIndicator.className = 'gif-indicator'; // Reuse styling, rename class if needed
-                videoIndicator.textContent = 'VIDEO';
-                videoIndicator.style.backgroundColor = '#007bff'; // Blue for video
-                assetContainer.appendChild(videoIndicator);
-            }
-
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'asset-delete-btn';
-            deleteBtn.innerHTML = '&times;';
-            deleteBtn.onclick = (e) => {
-                e.stopPropagation();
-                // When deleting from the asset panel, we want to remove it completely
-                deleteAsset(id, assetContainer, false); // Pass assetContainer so it's removed from panel
-            };
-            assetContainer.appendChild(deleteBtn);
-
-            assetsList.appendChild(assetContainer);
-            // Store the actual asset object for dragging
-            assetCache.set(id, { asset, type, src: asset.src }); 
-            openAssetsPanel(); // Open panel to show the newly added asset
-        }
-
-        /**
-         * Adds a background asset thumbnail to the background assets panel.
-         * @param {HTMLImageElement} asset - The loaded Image element.
-         * @param {string} id - The unique ID of the asset.
-         * @param {string} type - The type of asset ('background').
-         */
-        function addToBackgroundAssetsPanel(asset, id, type) {
-            const backgroundAssetsList = document.getElementById('backgroundAssetsList');
-            const assetContainer = document.createElement('div');
-            assetContainer.className = 'asset-container';
-            assetContainer.draggable = true;
-            assetContainer.dataset.assetId = id;
-            assetContainer.dataset.assetType = type;
-
-            const thumbnail = document.createElement('img');
-            thumbnail.src = asset.src;
-            thumbnail.alt = `Background Thumbnail ${id}`;
-            thumbnail.className = 'asset-thumbnail';
-            assetContainer.appendChild(thumbnail);
-
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'asset-delete-btn';
-            deleteBtn.innerHTML = '&times;';
-            deleteBtn.onclick = (e) => {
-                e.stopPropagation();
-                // Backgrounds are always fully removed when deleted from the panel.
-                deleteAsset(id, assetContainer, true); // Pass true to indicate it's a background asset
-            };
-            assetContainer.appendChild(deleteBtn);
-
-            backgroundAssetsList.appendChild(assetContainer);
-            assetCache.set(id, { asset, type, src: asset.src }); // Cache background asset
-            openAssetsPanel(); // Open panel to show the newly added asset
-        }
-
-        /**
-         * Deletes an asset from the canvas and/or asset panel/cache.
-         * @param {string} id - The unique ID of the asset.
-         * @param {HTMLElement|null} element - The HTML element of the asset container in the panel, if deletion originated there.
-         * @param {boolean} isBackground - True if it's a background image.
-         */
-        function deleteAsset(id, element = null, isBackground = false) {
-            // In a real application, you'd use a custom modal here
-            const userConfirmed = true; 
-
-            if (userConfirmed) {
-                // Handle deletion of Konva node from the canvas for both background and regular assets
-                let konvaNodeToRemove = null;
-                if (isBackground) {
-                    if (currentBackgroundNode && currentBackgroundNode.id() === id) {
-                        konvaNodeToRemove = currentBackgroundNode;
-                        currentBackgroundNode = null; // Clear the background reference
-                    }
-                } else {
-                    konvaNodeToRemove = layer.find(node => node.id() === id)[0];
-                }
-
-                if (konvaNodeToRemove) {
-                    // Stop animations associated with the node
-                    if (activeGifAnimations.has(konvaNodeToRemove.id())) {
-                        clearTimeout(konvaNodeToRemove.gifAnimationId); 
-                        activeGifAnimations.delete(konvaNodeToRemove.id());
-                    }
-                    if (activeAnimations.has(konvaNodeToRemove.id())) {
-                        activeAnimations.get(konvaNodeToRemove.id()).stop();
-                        activeAnimations.delete(konvaNodeToRemove.id());
-                    }
-                    // If it's a video element, remove its HTML video tag from the DOM
-                    if (konvaNodeToRemove.image() && konvaNodeToRemove.image().tagName === 'VIDEO') {
-                         konvaNodeToRemove.image().remove();
-                    }
-
-                    // Destroy the Konva node
-                    konvaNodeToRemove.destroy();
-                    if (transformer.nodes().includes(konvaNodeToRemove)) {
-                        transformer.nodes([]); // Deselect if currently selected
-                    }
-                    mediaElements.delete(konvaNodeToRemove.id()); // Remove from active media elements map
-                    layer.draw(); // Redraw main layer
-                    if (isBackground) {
-                        backgroundLayer.draw(); // Redraw background layer if needed
-                    }
-                    showShortcutFeedback('Item deleted from canvas');
-                } else {
-                    console.log('Konva node not found on canvas or already deleted:', id);
-                }
-
-                // Handle removal from asset panel and cache
-                // If 'element' is provided, it means deletion originated from the asset panel's 'X' button
-                if (element) {
-                    element.remove(); // Remove the thumbnail from the UI
-                    assetCache.delete(id); // Remove from cache
-                    showShortcutFeedback('Item removed from library');
-                }
-                // If element is null (deletion was from canvas), the item remains in assetCache and asset panel.
-                // This applies to both regular assets and backgrounds as per the user's request.
-            } else {
-                console.log('Deletion cancelled by user.');
-                       }
-        }
-
-        // --- KONVA DRAG & DROP EVENT LISTENERS ---
-
-        document.getElementById('assetsList').addEventListener('dragstart', (e) => {
-            if (e.target.classList.contains('asset-thumbnail')) {
-                const assetContainer = e.target.closest('.asset-container');
-                if (assetContainer) {
-                    e.dataTransfer.setData('text/plain', assetContainer.dataset.assetId);
-                    e.dataTransfer.effectAllowed = 'copy';
-                }
-            }
-        });
-
-        document.getElementById('backgroundAssetsList').addEventListener('dragstart', (e) => {
-            if (e.target.classList.contains('asset-thumbnail')) {
-                const assetContainer = e.target.closest('.asset-container');
-                if (assetContainer) {
-                    e.dataTransfer.setData('text/plain', assetContainer.dataset.assetId);
-
-                    e.dataTransfer.effectAllowed = 'copy';
-                }
-            }
-        });
-
-        document.getElementById('container').addEventListener('dragover', (e) => {
-            e.preventDefault();
-            e.dataTransfer.dropEffect = 'copy';
-            document.getElementById('container').classList.add('drag-over');
-        });
-
-        document.getElementById('container').addEventListener('dragleave', (e) => {
-            document.getElementById('container').classList.remove('drag-over');
-        });
-
-        document.getElementById('container').addEventListener('drop', async (e) => {
-            e.preventDefault();
-            document.getElementById('container').classList.remove('drag-over');
-
-            const assetId = e.dataTransfer.getData('text/plain');
-            if (!assetId) return;
-
-            const assetData = assetCache.get(assetId);
-            if (!assetData) {
-                showError('Asset not found in cache.');
-                return;
-            }
-
-            const pointerPosition = stage.getPointerPosition();
-            const dropX = pointerPosition.x;
-            const dropY = pointerPosition.y;
-
-            showLoading();
-            try {
-                if (assetData.type === 'image') {
-                    const img = await loadImageElement(assetData.src); // Use helper
-                    hideLoading();
-                    drawImage(img, dropX, dropY, assetId); // Pass assetId
-                } else if (assetData.type === 'gif') {
-                    const img = await loadImageElement(assetData.src); // Use helper
-                    hideLoading();
-                    drawAnimatedGif(img, dropX, dropY, assetData.src, assetId); // Pass assetId
-                } else if (assetData.type === 'video') {
-                    // Re-use the existing video element from cache for performance, don't create new
-                    const videoElement = assetData.asset; 
-                    hideLoading();
-                    drawVideo(videoElement, dropX, dropY, assetId); // Pass assetId
-                } else if (assetData.type === 'text') {
-                     // For text, add a new text node with default properties or from cached data
-                    addTextNode(assetData.text || 'Dragged Text', dropX, dropY, assetData.fontSize, assetData.fill, assetData.fontFamily, assetId); // Pass assetId
-                    hideLoading();
-                } else if (assetData.type === 'background') { // Handle background image drop
-                    const img = await loadImageElement(assetData.src); // Use helper
-                    hideLoading();
-                    drawBackground(img, assetId); // Pass assetId to drawBackground
-                    showShortcutFeedback('Background image set');
-                }
-            } catch (error) {
-                hideLoading();
-                showError('Error dropping asset: ' + error.message);
-            }
-        });
-
-        // --- UI AND HOTKEY EVENT LISTENERS ---
-
-        // Fullscreen toggle
-        document.getElementById('fullscreenToggle').addEventListener('click', async () => {
-            try {
-                if (document.fullscreenElement) {
-                    await document.exitFullscreen();
-                } else {
-                    await document.documentElement.requestFullscreen();
-                }
-            } catch (e) {
-                console.error("Fullscreen error:", e);
-                showError("Fullscreen functionality is blocked by browser or permissions policy.");
-            }
-        });
-
-        document.addEventListener('fullscreenchange', () => {
-            const button = document.getElementById('fullscreenToggle');
-            // Keep the same icon, only change title for consistency
-            button.innerHTML = '⛶'; 
-            button.title = document.fullscreenElement ? 'Exit Fullscreen - Press F11' : 'Toggle Fullscreen - Press F11';
-        });
-
-        // Hotkeys for toolbar actions
-        document.addEventListener('keydown', (e) => {
-            // Get the currently selected node from the transformer or last selected
-            let selectedNode = getTargetNode();
-
-            if (e.key === 'Delete' || e.key === 'Backspace') {
-                if (selectedNode) {
-                    // Determine if it's the background or a regular element
-                    if (selectedNode.name() === 'background_image') {
-                        // Call deleteAsset for background, but don't remove from panel/cache if deleted from canvas
-                        deleteAsset(selectedNode.id(), null, true); // Pass null for element, true for isBackground
+                if (userConfirmed) {
+                    let konvaNodeToRemove = null;
+                    if (isFixedLayer) {
+                        if (this.currentBackgroundNode && this.currentBackgroundNode.id() === id) {
+                            konvaNodeToRemove = this.currentBackgroundNode;
+                            this.currentBackgroundNode = null;
+                        } else if (this.currentForegroundNode && this.currentForegroundNode.id() === id) {
+                            konvaNodeToRemove = this.currentForegroundNode;
+                            this.currentForegroundNode = null;
+                        }
                     } else {
-                        // Call deleteAsset for regular media, but don't remove from panel/cache if deleted from canvas
-                        deleteAsset(selectedNode.id(), null, false); // Pass null for element, false for isBackground
+                        konvaNodeToRemove = this.layer.find(node => node.id() === id)[0];
                     }
-                    // Clear the last selected node if we just deleted it
-                    if (lastSelectedNode === selectedNode) {
-                        lastSelectedNode = null;
+
+                    if (konvaNodeToRemove) {
+                        if (this.activeGifAnimations.has(konvaNodeToRemove.id())) {
+                            clearTimeout(konvaNodeToRemove.gifAnimationId);
+                            this.activeGifAnimations.delete(konvaNodeToRemove.id());
+                        }
+                        if (this.activeAnimations.has(konvaNodeToRemove.id())) {
+                            this.activeAnimations.get(konvaNodeToRemove.id()).stop();
+                            this.activeAnimations.delete(konvaNodeToRemove.id());
+                        }
+                        if (konvaNodeToRemove.image() && konvaNodeToRemove.image().tagName === 'VIDEO') {
+                             konvaNodeToRemove.image().remove(); // Remove HTML video element
+                        }
+
+                        konvaNodeToRemove.destroy();
+                        if (this.transformer.nodes().includes(konvaNodeToRemove)) {
+                            this.transformer.nodes([]);
+                        }
+                        this.mediaElements.delete(konvaNodeToRemove.id());
+                        this.layer.draw();
+                        if (this.backgroundLayer) this.backgroundLayer.draw();
+                        if (this.foregroundLayer) this.foregroundLayer.draw();
+                        this.showShortcutFeedback('Item deleted from canvas');
+                    } else {
+                        console.log('Konva node not found on canvas or already deleted:', id);
                     }
-                    e.preventDefault(); // Prevent browser back navigation
-                } else {
-                    showError('Select an item first or no previous selection found.');
+
+                    if (element) {
+                        element.remove();
+                        this.assetCache.delete(id);
+                        this.showShortcutFeedback('Item removed from library');
+                    }
                 }
             }
 
-            if (e.ctrlKey && e.key === '1') { // Ctrl + 1 for Shake
-                e.preventDefault();
-                document.getElementById('shakeButton').click();
-            }
-            if (e.ctrlKey && e.key === '2') { // Ctrl + 2 for Circle
-                e.preventDefault();
-                document.getElementById('circleButton').click();
-            }
-            if (e.ctrlKey && e.key === '3') { // Ctrl + 3 for Animation Settings
-                e.preventDefault();
-                document.getElementById('animationSettings').click();
-            }
-            if (e.ctrlKey && e.key === '4') { // Ctrl + 4 for Flip
-                e.preventDefault();
-                document.getElementById('flipButton').click();
-            }
-            if (e.ctrlKey && e.key === 'ArrowUp') { // Ctrl + Up Arrow for Move Layer Up
-                e.preventDefault();
-                document.getElementById('moveUp').click();
-            }
-            if (e.ctrlKey && e.key === 'ArrowDown') { // Ctrl + Down Arrow for Move Layer Down
-                e.preventDefault();
-                document.getElementById('moveDown').click();
-            }
-            if (e.key === 'F11') { // F11 for Fullscreen
-                e.preventDefault();
-                document.getElementById('fullscreenToggle').click();
-            }
-        });
+            /** Drag & Drop Handlers **/
 
-        // Implement toolbar functionality
-        document.getElementById('increaseSize').addEventListener('click', () => {
-            const node = getTargetNode();
-            if (node) {
-                node.scaleX(node.scaleX() * 1.1);
-                node.scaleY(node.scaleY() * 1.1);
-                layer.draw();
-                showShortcutFeedback('Increased Size');
-            } else {
-                showError('Select an item first or no previous selection found.');
-            }
-        });
-
-        document.getElementById('decreaseSize').addEventListener('click', () => {
-            const node = getTargetNode();
-            if (node) {
-                node.scaleX(node.scaleX() * 0.9);
-                node.scaleY(node.scaleY() * 0.9);
-                layer.draw();
-                showShortcutFeedback('Decreased Size');
-            } else {
-                showError('Select an item first or no previous selection found.');
-            }
-        });
-
-        document.getElementById('deleteItem').addEventListener('click', () => {
-            const node = getTargetNode();
-            if (node) {
-                // Determine if it's the background or a regular element
-                if (node.name() === 'background_image') {
-                    // Call deleteAsset for background, but don't remove from panel/cache if deleted from canvas
-                    deleteAsset(node.id(), null, true); // Pass null for element, true for isBackground
-                } else {
-                    // Call deleteAsset for regular media, but don't remove from panel/cache if deleted from canvas
-                    deleteAsset(node.id(), null, false); // Pass null for element, false for isBackground
+            handleAssetDragStart(e) {
+                if (e.target.classList.contains('asset-thumbnail')) {
+                    const assetContainer = e.target.closest('.asset-container');
+                    if (assetContainer) {
+                        e.dataTransfer.setData('text/plain', assetContainer.dataset.assetId);
+                        e.dataTransfer.effectAllowed = 'copy';
+                    }
                 }
-                // Clear the last selected node if we just deleted it
-                if (lastSelectedNode === node) {
-                    lastSelectedNode = null;
-                }
-            } else {
-                showError('Select an item first or no previous selection found.');
             }
-        });
 
-        // Layer control functions
-        document.getElementById('moveUp').addEventListener('click', () => {
-            const node = getTargetNode();
-            if (node) {
-                // Don't allow moving background elements
-                if (node.name() === 'background_image') {
-                    showError('Background images cannot be moved in layers.');
+            handleDragOver(e) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+                this.elements.container.classList.add('drag-over');
+            }
+
+            handleDragLeave() {
+                this.elements.container.classList.remove('drag-over');
+            }
+
+            async handleDrop(e) {
+                e.preventDefault();
+                this.elements.container.classList.remove('drag-over');
+
+                const assetId = e.dataTransfer.getData('text/plain');
+                if (!assetId) {
+                    console.warn('[handleDrop] No asset ID found in dataTransfer.');
                     return;
                 }
-                node.moveUp();
-                layer.draw();
-                showShortcutFeedback('Moved layer up');
-            } else {
-                showError('Select an item first or no previous selection found.');
-            }
-        });
 
-        document.getElementById('moveDown').addEventListener('click', () => {
-            const node = getTargetNode();
-            if (node) {
-                // Don't allow moving background elements
-                if (node.name() === 'background_image') {
-                    showError('Background images cannot be moved in layers.');
+                const assetData = this.assetCache.get(assetId);
+                if (!assetData) {
+                    this.showError('Asset not found in cache.');
+                    console.error('[handleDrop] Asset data not found for ID:', assetId);
                     return;
                 }
-                node.moveDown();
-                layer.draw();
-                showShortcutFeedback('Moved layer down');
-            } else {
-                showError('Select an item first or no previous selection found.');
-            }
-        });
+                console.log('[handleDrop] Dropped asset type:', assetData.type, 'ID:', assetId);
 
-        document.getElementById('shakeButton').addEventListener('click', () => {
-            const node = getTargetNode();
-            console.log('Shake button clicked, target node:', node); // Debug log
-            if (node) {
-                // Stop any existing animation on this node
-                if (activeAnimations.has(node.id())) {
-                    activeAnimations.get(node.id()).stop();
-                    activeAnimations.delete(node.id());
+                const pointerPosition = this.stage.getPointerPosition();
+                const dropX = pointerPosition.x;
+                const dropY = pointerPosition.y;
+
+                this.showLoading();
+                try {
+                    switch (assetData.type) {
+                        case 'image':
+                            const img = await this.loadImageElement(assetData.src);
+                            this.drawImage(img, dropX, dropY, assetId);
+                            break;
+                        case 'gif':
+                            const gifImg = await this.loadImageElement(assetData.src);
+                            this.drawAnimatedGif(gifImg, dropX, dropY, assetData.src, assetId);
+                            break;
+                        case 'video':
+                            const videoElement = assetData.asset; // Reuse existing video element
+                            this.drawVideo(videoElement, dropX, dropY, assetId);
+                            break;
+                        case 'background':
+                            const bgImg = await this.loadImageElement(assetData.src);
+                            this.drawBackground(bgImg, assetId);
+                            this.showShortcutFeedback('Background image set');
+                            break;
+                        case 'foreground_image_file':
+                            const fgImg = await this.loadImageElement(assetData.src);
+                            // When dragging from the media library, add as a draggable image to the main layer
+                            this.drawImage(fgImg, dropX, dropY, assetId);
+                            this.showShortcutFeedback('Foreground image added as draggable');
+                            break;
+                        default:
+                            this.showError('Unsupported asset type for drop.');
+                            break;
+                    }
+                    this.hideLoading();
+                } 
+                catch (error) { 
+                    this.hideLoading();
+                    this.showError('Error dropping asset: ' + error.message);
                 }
-                
-                const initialX = node.x();
-                const amplitude = shakeSettings.distance / 2;
-                const duration = 2000 / shakeSettings.speed; // Total duration in milliseconds
-                let startTime = null;
+            }
 
-                const shakeAnimation = new Konva.Animation(function (frame) {
-                    if (!startTime) startTime = frame.time;
-                    const elapsed = frame.time - startTime;
-                    
-                    // Stop animation when duration is reached
-                    if (elapsed >= duration) {
-                        node.x(initialX); // Reset to initial position
-                        shakeAnimation.stop();
-                        activeAnimations.delete(node.id());
-                        layer.draw();
+            /** UI Actions & Hotkeys **/
+
+            toggleFullscreen() {
+                try {
+                    if (document.fullscreenElement) {
+                        document.exitFullscreen();
+                    } else {
+                        document.documentElement.requestFullscreen();
+                    }
+                } catch (e) {
+                    console.error("Fullscreen error:", e);
+                    this.showError("Fullscreen functionality is blocked by browser or permissions policy.");
+                }
+            }
+
+            updateFullscreenButton() {
+                const button = this.elements.toolbar.querySelector('#fullscreenToggle');
+                button.innerHTML = '⛶'; // Always same icon, only title changes
+                button.title = document.fullscreenElement ? 'Exit Fullscreen - Press F11' : 'Toggle Fullscreen - Press F11';
+            }
+
+            handleHotkeys(e) {
+                const selectedNode = this.getTargetNode();
+
+                if (e.key === 'Delete' || e.key === 'Backspace') {
+                    if (selectedNode) {
+                        // Check if it's a fixed layer (background/foreground) or a general media element
+                        const isFixed = (selectedNode.name() === 'background_image' || selectedNode.name() === 'foreground_image');
+                        this.deleteAsset(selectedNode.id(), null, isFixed);
+                        if (this.lastSelectedNode === selectedNode) {
+                            this.lastSelectedNode = null;
+                        }
+                        e.preventDefault();
+                    } else {
+                        this.showError('Select an item first or no previous selection found.');
+                    }
+                }
+
+                if (e.ctrlKey) {
+                    switch (e.key) {
+                        case '1': e.preventDefault(); this.applyShakeAnimation(); break;
+                        case '2': e.preventDefault(); this.applyCircleAnimation(); break;
+                        case '3': e.preventDefault(); this.showAnimationSettings(); break;
+                        case '4': e.preventDefault(); this.applyFlipAnimation(); break;
+                        case 'ArrowUp': e.preventDefault(); this.moveLayerUp(); break;
+                        case 'ArrowDown': e.preventDefault(); this.moveLayerDown(); break;
+                    }
+                }
+                if (e.key === 'F11') {
+                    e.preventDefault();
+                    this.toggleFullscreen();
+                }
+            }
+
+            increaseSize() {
+                const node = this.getTargetNode();
+                if (node) {
+                    if (node.name() === 'background_image' || node.name() === 'foreground_image') {
+                        this.showError('Background and Foreground images are scaled automatically to fit the canvas and cannot be resized manually.');
                         return;
                     }
-
-                    // Calculate shake position
-                    const progress = elapsed / duration;
-                    const cycles = shakeSettings.repetitions;
-                    const newX = initialX + amplitude * Math.sin(progress * cycles * Math.PI * 2);
-                    node.x(newX);
-                }, layer);
-
-                activeAnimations.set(node.id(), shakeAnimation);
-                shakeAnimation.start();
-                showShortcutFeedback('Shake Animation applied');
-            } else {
-                showError('Select an item first or no previous selection found.');
-            }
-        });
-
-        document.getElementById('circleButton').addEventListener('click', () => {
-            const node = getTargetNode();
-            console.log('Circle button clicked, target node:', node); // Debug log
-            if (node) {
-                // Stop any existing animation on this node
-                if (activeAnimations.has(node.id())) {
-                    activeAnimations.get(node.id()).stop();
-                    activeAnimations.delete(node.id());
+                    node.scaleX(node.scaleX() * 1.1);
+                    node.scaleY(node.scaleY() * 1.1);
+                    this.layer.draw();
+                    this.showShortcutFeedback('Increased Size');
+                } else {
+                    this.showError('Select an item first or no previous selection found.');
                 }
-                
-                const initialX = node.x();
-                const initialY = node.y();
-                const centerX = initialX + node.width() / 2;
-                const centerY = initialY + node.height() / 2;
-                const radius = circleSettings.radius;
-                const duration = 3000 / circleSettings.speed; // Total duration in milliseconds
-                let startTime = null;
+            }
 
-                const circleAnimation = new Konva.Animation(function (frame) {
-                    if (!startTime) startTime = frame.time;
-                    const elapsed = frame.time - startTime;
-                    
-                    // Stop animation when duration is reached
-                    if (elapsed >= duration) {
-                        node.x(initialX); // Reset to initial position
-                        node.y(initialY);
-                        circleAnimation.stop();
-                        activeAnimations.delete(node.id());
-                        layer.draw();
+            decreaseSize() {
+                const node = this.getTargetNode();
+                if (node) {
+                    if (node.name() === 'background_image' || node.name() === 'foreground_image') {
+                        this.showError('Background and Foreground images are scaled automatically to fit the canvas and cannot be resized manually.');
                         return;
                     }
-
-                    // Calculate circle position
-                    const progress = elapsed / duration;
-                    const cycles = circleSettings.repetitions;
-                    const angle = progress * cycles * Math.PI * 2;
-                    node.x(centerX + radius * Math.cos(angle) - node.width() / 2);
-                    node.y(centerY + radius * Math.sin(angle) - node.height() / 2);
-                }, layer);
-
-                activeAnimations.set(node.id(), circleAnimation);
-                circleAnimation.start();
-                showShortcutFeedback('Circle Animation applied');
-            } else {
-                showError('Select an item first or no previous selection found.');
-            }
-        });
-
-        document.getElementById('flipButton').addEventListener('click', () => {
-            const node = getTargetNode();
-            console.log('Flip button clicked, target node:', node); // Debug log
-            if (node) {
-                // Stop any existing animation on this node
-                if (activeAnimations.has(node.id())) {
-                    activeAnimations.get(node.id()).stop();
-                    activeAnimations.delete(node.id());
+                    node.scaleX(node.scaleX() * 0.9);
+                    node.scaleY(node.scaleY() * 0.9);
+                    this.layer.draw();
+                    this.showShortcutFeedback('Decreased Size');
+                } else {
+                    this.showError('Select an item first or no previous selection found.');
                 }
-                
-                // Always start from the CURRENT state of the node
-                const startScaleX = node.scaleX();
-                const targetScaleX = -startScaleX; // Simply flip to the opposite
-                
-                // Calculate the current center of the object
-                const centerX = node.x() + (node.width() * startScaleX) / 2;
-                const centerY = node.y() + node.height() / 2;
-                
-                const duration = 1000 / flipSettings.speed; // Duration for the flip
-                let startTime = null;
+            }
 
-                const flipAnimation = new Konva.Animation(function (frame) {
-                    if (!startTime) startTime = frame.time;
-                    const elapsed = frame.time - startTime;
+            deleteSelectedItem() {
+                const node = this.getTargetNode();
+                if (node) {
+                    const isFixed = (node.name() === 'background_image' || node.name() === 'foreground_image');
+                    this.deleteAsset(node.id(), null, isFixed);
+                    if (this.lastSelectedNode === node) {
+                        this.lastSelectedNode = null;
+                    }
+                } else {
+                    this.showError('Select an item first or no previous selection found.');
+                }
+            }
+
+            moveLayerUp() {
+                const node = this.getTargetNode();
+                if (node) {
+                    if (node.name() === 'background_image' || node.name() === 'foreground_image') {
+                        this.showError('Background and Foreground images cannot be reordered as they are fixed layers.');
+                        return;
+                    }
+                    node.moveUp();
+                    this.layer.draw();
+                    this.showShortcutFeedback('Moved layer up');
+                } else {
+                    this.showError('Select an item first or no previous selection found.');
+                }
+            }
+
+            moveLayerDown() {
+                const node = this.getTargetNode();
+                if (node) {
+                    if (node.name() === 'background_image' || node.name() === 'foreground_image') {
+                        this.showError('Background and Foreground images cannot be reordered as they are fixed layers.');
+                        return;
+                    }
+                    node.moveDown();
+                    this.layer.draw();
+                    this.showShortcutFeedback('Moved layer down');
+                } else {
+                    this.showError('Select an item first or no previous selection found.');
+                }
+            }
+
+            applyShakeAnimation() {
+                const node = this.getTargetNode();
+                if (node) {
+                    if (node.name() === 'background_image' || node.name() === 'foreground_image') {
+                        this.showError('Background and Foreground images cannot be animated as they are fixed layers.');
+                        return;
+                    }
+                    if (this.activeAnimations.has(node.id())) {
+                        this.activeAnimations.get(node.id()).stop();
+                        this.activeAnimations.delete(node.id());
+                    }
                     
-                    // Stop animation when duration is reached
-                    if (elapsed >= duration) {
-                        node.scaleX(targetScaleX);
-                        // Position so center remains at centerX
-                        node.x(centerX - (node.width() * targetScaleX) / 2);
+                    const initialX = node.x();
+                    const amplitude = this.shakeSettings.distance / 2;
+                    const duration = 2000 / this.shakeSettings.speed;
+                    let startTime = null;
+
+                    const shakeAnimation = new Konva.Animation((frame) => {
+                        if (!startTime) startTime = frame.time;
+                        const elapsed = frame.time - startTime;
+                        
+                        if (elapsed >= duration) {
+                            node.x(initialX);
+                            shakeAnimation.stop();
+                            this.activeAnimations.delete(node.id());
+                            this.layer.draw();
+                            return;
+                        }
+
+                        const progress = elapsed / duration;
+                        const cycles = this.shakeSettings.repetitions;
+                        const newX = initialX + amplitude * Math.sin(progress * cycles * Math.PI * 2);
+                        node.x(newX);
+                    }, this.layer);
+
+                    this.activeAnimations.set(node.id(), shakeAnimation);
+                    shakeAnimation.start();
+                    this.showShortcutFeedback('Shake Animation applied');
+                } else {
+                    this.showError('Select an item first or no previous selection found.');
+                }
+            }
+
+            applyCircleAnimation() {
+                const node = this.getTargetNode();
+                if (node) {
+                    if (node.name() === 'background_image' || node.name() === 'foreground_image') {
+                        this.showError('Background and Foreground images cannot be animated as they are fixed layers.');
+                        return;
+                    }
+                    if (this.activeAnimations.has(node.id())) {
+                        this.activeAnimations.get(node.id()).stop();
+                        this.activeAnimations.delete(node.id());
+                    }
+                    
+                    const initialX = node.x();
+                    const initialY = node.y();
+                    
+                    const nodeCenterX = initialX + node.width() / 2;
+                    const nodeCenterY = initialY + node.height() / 2;
+
+                    const radius = this.circleSettings.radius;
+                    const duration = 3000 / this.circleSettings.speed;
+                    let startTime = null;
+
+                    const startAngle = Math.atan2(initialY - nodeCenterY, initialX - nodeCenterX);
+
+                    const circleAnimation = new Konva.Animation((frame) => {
+                        if (!startTime) startTime = frame.time;
+                        const elapsed = frame.time - startTime;
+                        
+                        if (elapsed >= duration) {
+                            node.x(initialX);
+                            node.y(initialY);
+                            circleAnimation.stop();
+                            this.activeAnimations.delete(node.id());
+                            this.layer.draw();
+                            return;
+                        }
+
+                        const progress = elapsed / duration;
+                        const cycles = this.circleSettings.repetitions;
+                        const angle = startAngle + progress * cycles * Math.PI * 2; 
+
+                        node.x(nodeCenterX + radius * Math.cos(angle) - node.width() / 2);
+                        node.y(nodeCenterY + radius * Math.sin(angle) - node.height() / 2);
+                    }, this.layer);
+
+                    this.activeAnimations.set(node.id(), circleAnimation);
+                    circleAnimation.start();
+                    this.showShortcutFeedback('Circle Animation applied');
+                } else {
+                    this.showError('Select an item first or no previous selection found.');
+                }
+            }
+
+            applyFlipAnimation() {
+                const node = this.getTargetNode();
+                if (node) {
+                    if (node.name() === 'background_image' || node.name() === 'foreground_image') {
+                        this.showError('Background and Foreground images cannot be animated as they are fixed layers.');
+                        return;
+                    }
+                    if (this.activeAnimations.has(node.id())) {
+                        this.activeAnimations.get(node.id()).stop();
+                        this.activeAnimations.delete(node.id());
+                    }
+                    
+                    const startScaleX = node.scaleX();
+                    const targetScaleX = -startScaleX;
+                    
+                    const centerX = node.x() + (node.width() * startScaleX) / 2;
+                    const centerY = node.y() + node.height() / 2;
+                    
+                    const duration = 1000 / this.flipSettings.speed;
+                    let startTime = null;
+
+                    const flipAnimation = new Konva.Animation((frame) => {
+                        if (!startTime) startTime = frame.time;
+                        const elapsed = frame.time - startTime;
+                        
+                        if (elapsed >= duration) {
+                            node.scaleX(targetScaleX);
+                            node.x(centerX - (node.width() * targetScaleX) / 2);
+                            node.y(centerY - node.height() / 2);
+                            flipAnimation.stop();
+                            this.activeAnimations.delete(node.id());
+                            this.layer.draw();
+                            return;
+                        }
+
+                        const progress = elapsed / duration;
+                        const scaleProgress = Math.cos(progress * Math.PI);
+                        const currentScaleX = startScaleX + (targetScaleX - startScaleX) * (1 - scaleProgress) / 2;
+                        
+                        node.scaleX(currentScaleX);
+                        node.x(centerX - (node.width() * currentScaleX) / 2);
                         node.y(centerY - node.height() / 2);
-                        flipAnimation.stop();
-                        activeAnimations.delete(node.id());
-                        layer.draw();
-                        return;
-                    }
+                    }, this.layer);
 
-                    // Calculate smooth progress from 0 to 1
-                    const progress = elapsed / duration;
-                    
-                    // Use cosine for smooth flip motion (goes from 1 to -1)
-                    const scaleProgress = Math.cos(progress * Math.PI);
-                    
-                    // Interpolate between start and target scale
-                    const currentScaleX = startScaleX + (targetScaleX - startScaleX) * (1 - scaleProgress) / 2;
-                    
-                    node.scaleX(currentScaleX);
-                    // Keep the center fixed
-                    node.x(centerX - (node.width() * currentScaleX) / 2);
-                    node.y(centerY - node.height() / 2);
-                }, layer);
-
-                activeAnimations.set(node.id(), flipAnimation);
-                flipAnimation.start();
-                showShortcutFeedback('Flip Animation applied');
-            } else {
-                showError('Select an item first or no previous selection found.');
+                    this.activeAnimations.set(node.id(), flipAnimation);
+                    flipAnimation.start();
+                    this.showShortcutFeedback('Flip Animation applied');
+                } else {
+                    this.showError('Select an item first or no previous selection found.');
+                }
             }
-        });
 
-        // Animation Settings Menu
-        const animationSettingsMenu = document.getElementById('animationSettingsMenu');
-        const shakeSpeedSlider = document.getElementById('shakeSpeed');
-        const shakeSpeedValueDisplay = document.getElementById('shakeSpeedValue');
-        const shakeRepetitionsInput = document.getElementById('shakeRepetitions');
-        const shakeDistanceSlider = document.getElementById('shakeDistance');
-        const shakeDistanceValueDisplay = document.getElementById('shakeDistanceValue');
+            showAnimationSettings() {
+                this.elements.shakeSpeedSlider.value = this.shakeSettings.speed;
+                this.elements.shakeSpeedValueDisplay.textContent = `${this.shakeSettings.speed}x`;
+                this.elements.shakeRepetitionsInput.value = this.shakeSettings.repetitions;
+                this.elements.shakeDistanceSlider.value = this.shakeSettings.distance;
+                this.elements.shakeDistanceValueDisplay.textContent = `${this.shakeSettings.distance}px`;
 
-        const circleSpeedSlider = document.getElementById('circleSpeed');
-        const circleSpeedValueDisplay = document.getElementById('circleSpeedValue');
-        const circleRepetitionsInput = document.getElementById('circleRepetitions');
-        const circleRadiusSlider = document.getElementById('circleRadius');
-        const circleRadiusValueDisplay = document.getElementById('circleRadiusValue');
+                this.elements.circleSpeedSlider.value = this.circleSettings.speed;
+                this.elements.circleSpeedValueDisplay.textContent = `${this.circleSettings.speed}x`;
+                this.elements.circleRepetitionsInput.value = this.circleSettings.repetitions;
+                this.elements.circleRadiusSlider.value = this.circleSettings.radius;
+                this.elements.circleRadiusValueDisplay.textContent = `${this.circleSettings.radius}px`;
 
-        const flipSpeedSlider = document.getElementById('flipSpeed');
-        const flipSpeedValueDisplay = document.getElementById('flipSpeedValue');
-        const flipRepetitionsInput = document.getElementById('flipRepetitions');
+                this.elements.flipSpeedSlider.value = this.flipSettings.speed;
+                this.elements.flipSpeedValueDisplay.textContent = `${this.flipSettings.speed}x`;
+                this.elements.flipRepetitionsInput.value = this.flipSettings.repetitions;
 
-        document.getElementById('animationSettings').addEventListener('click', () => {
-            // Load current settings into the sliders
-            shakeSpeedSlider.value = shakeSettings.speed;
-            shakeSpeedValueDisplay.textContent = `${shakeSettings.speed}x`;
-            shakeRepetitionsInput.value = shakeSettings.repetitions;
-            shakeDistanceSlider.value = shakeSettings.distance;
-            shakeDistanceValueDisplay.textContent = `${shakeSettings.distance}px`;
-
-            circleSpeedSlider.value = circleSettings.speed;
-            circleSpeedValueDisplay.textContent = `${circleSettings.speed}x`;
-            circleRepetitionsInput.value = circleSettings.repetitions;
-            circleRadiusSlider.value = circleSettings.radius;
-            circleRadiusValueDisplay.textContent = `${circleSettings.radius}px`;
-
-            flipSpeedSlider.value = flipSettings.speed;
-            flipSpeedValueDisplay.textContent = `${flipSettings.speed}x`;
-            flipRepetitionsInput.value = flipSettings.repetitions;
-
-            animationSettingsMenu.style.display = 'block';
-        });
-
-        document.getElementById('closeAnimationSettings').addEventListener('click', () => {
-            animationSettingsMenu.style.display = 'none';
-        });
-
-        document.getElementById('saveAnimationSettings').addEventListener('click', () => {
-            shakeSettings = {
-                speed: parseFloat(shakeSpeedSlider.value),
-                repetitions: parseInt(shakeRepetitionsInput.value),
-                distance: parseInt(shakeDistanceSlider.value)
-            };
-            circleSettings = {
-                speed: parseFloat(circleSpeedSlider.value),
-                repetitions: parseInt(circleRepetitionsInput.value),
-                radius: parseInt(circleRadiusSlider.value)
-            };
-            flipSettings = {
-                speed: parseFloat(flipSpeedSlider.value),
-                repetitions: parseInt(flipRepetitionsInput.value)
-            };
-            animationSettingsMenu.style.display = 'none';
-            showShortcutFeedback('Animation settings saved');
-        });
-
-        shakeSpeedSlider.addEventListener('input', (e) => shakeSpeedValueDisplay.textContent = `${e.target.value}x`);
-        shakeDistanceSlider.addEventListener('input', (e) => shakeDistanceValueDisplay.textContent = `${e.target.value}px`);
-        circleSpeedSlider.addEventListener('input', (e) => circleSpeedValueDisplay.textContent = `${e.target.value}x`);
-        circleRadiusSlider.addEventListener('input', (e) => circleRadiusValueDisplay.textContent = `${e.target.value}px`);
-        flipSpeedSlider.addEventListener('input', (e) => flipSpeedValueDisplay.textContent = `${e.target.value}x`);
-
-
-        // Text Popup functionality
-        const textPopup = document.getElementById('textPopup');
-        const popupTextInput = document.getElementById('popupTextInput');
-        const colorPicker = document.getElementById('colorPicker');
-        const fontPicker = document.getElementById('fontPicker');
-        const fontSizeSlider = document.getElementById('fontSizeSlider');
-        const fontSizeValue = document.getElementById('fontSizeValue');
-        const textPreview = document.getElementById('textPreview');
-
-        document.getElementById('addText').addEventListener('click', () => {
-            textPopup.style.display = 'block';
-            // Reset to default values when opening
-            popupTextInput.value = 'New Text';
-            colorPicker.value = '#ffffff';
-            fontPicker.value = 'Arial';
-            fontSizeSlider.value = '24';
-            fontSizeValue.textContent = '24px';
-            updateTextPreview();
-        });
-
-        document.getElementById('cancelTextButton').addEventListener('click', () => {
-            textPopup.style.display = 'none';
-        });
-
-        popupTextInput.addEventListener('input', updateTextPreview);
-        colorPicker.addEventListener('input', updateTextPreview);
-        fontPicker.addEventListener('change', updateTextPreview);
-        fontSizeSlider.addEventListener('input', () => {
-            fontSizeValue.textContent = `${fontSizeSlider.value}px`;
-            updateTextPreview();
-        });
-
-        function updateTextPreview() {
-            textPreview.textContent = popupTextInput.value || 'Preview Text';
-            textPreview.style.color = colorPicker.value;
-            textPreview.style.fontFamily = fontPicker.value;
-            textPreview.style.fontSize = `${fontSizeSlider.value}px`;
-            
-            // Adjust background color for contrast (simple logic)
-            const hex = colorPicker.value.substring(1);
-            const r = parseInt(hex.substring(0, 2), 16);
-            const g = parseInt(hex.substring(2, 4), 16);
-            const b = parseInt(hex.substring(4, 6), 16);
-            const brightness = ((r * 299) + (g * 587) + (b * 114)) / 1000;
-            textPreview.style.backgroundColor = brightness > 125 ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.2)';
-        }
-
-        let currentTextNode = null; // To keep track of the text node being edited
-
-        document.getElementById('addTextButton').addEventListener('click', () => {
-            const textContent = popupTextInput.value || 'New Text';
-            const color = colorPicker.value;
-            const font = fontPicker.value;
-            const fontSize = parseInt(fontSizeSlider.value);
-            const uniqueId = 'text_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-
-            // Add text to assets panel as well
-            assetCache.set(uniqueId, { 
-                asset: textContent, // Store the text itself
-                type: 'text', 
-                text: textContent, 
-                fontSize: fontSize, 
-                fill: color, 
-                fontFamily: font 
-            });
-
-            const assetsList = document.getElementById('assetsList');
-            const assetContainer = document.createElement('div');
-            assetContainer.className = 'asset-container';
-            assetContainer.draggable = true;
-            assetContainer.dataset.assetId = uniqueId;
-            assetContainer.dataset.assetType = 'text';
-
-            const textThumbnail = document.createElement('div');
-            textThumbnail.className = 'asset-thumbnail';
-            textThumbnail.style.backgroundColor = 'rgba(0,0,0,0.3)';
-            textThumbnail.style.color = color;
-            textThumbnail.style.fontFamily = font;
-            textThumbnail.style.fontSize = `${fontSize * 0.5}px` // Smaller font for thumbnail
-            textThumbnail.style.padding = '5px';
-            textThumbnail.style.display = 'flex';
-            textThumbnail.style.alignItems = 'center';
-            textThumbnail.style.justifyContent = 'center';
-            textThumbnail.style.textAlign = 'center';
-            textThumbnail.style.overflow = 'hidden';
-            textThumbnail.style.textOverflow = 'ellipsis';
-            textThumbnail.innerHTML = textContent.length > 20 ? textContent.substring(0,17) + '...' : textContent;
-            assetContainer.appendChild(textThumbnail);
-
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'asset-delete-btn';
-            deleteBtn.innerHTML = '&times;';
-            deleteBtn.onclick = (e) => {
-                e.stopPropagation();
-                deleteAsset(uniqueId, assetContainer, false);
-            };
-            assetContainer.appendChild(deleteBtn);
-            assetsList.appendChild(assetContainer);
-
-            textPopup.style.display = 'none';
-            showShortcutFeedback('Text added to Media Library');
-            openAssetsPanel(); // Open panel to show the newly added text asset
-        });
-
-        // Make the text popup draggable
-        let isDraggingTextPopup = false;
-        let textPopupOffsetX, textPopupOffsetY;
-
-        document.getElementById('textPopupTitleBar').addEventListener('mousedown', (e) => {
-            isDraggingTextPopup = true;
-            textPopupOffsetX = e.clientX - textPopup.getBoundingClientRect().left;
-            textPopupOffsetY = e.clientY - textPopup.getBoundingClientRect().top;
-            textPopup.style.cursor = 'grabbing';
-        });
-
-        document.addEventListener('mousemove', (e) => {
-            if (!isDraggingTextPopup) return;
-            textPopup.style.left = `${e.clientX - textPopupOffsetX}px`;
-            textPopup.style.top = `${e.clientY - textPopupOffsetY}px`;
-        });
-
-        document.addEventListener('mouseup', () => {
-            isDraggingTextPopup = false;
-            textPopup.style.cursor = 'grab';
-        });
-
-        // Assets panel toggle
-        assetsPanelToggle.addEventListener('click', () => {
-            assetsPanel.classList.toggle('expanded');
-            if (assetsPanel.classList.contains('expanded')) {
-                assetsPanelToggle.innerHTML = '▶';
-                assetsPanelToggle.title = 'Collapse Media Library';
-            } else {
-                assetsPanelToggle.innerHTML = '◀';
-                assetsPanelToggle.title = 'Expand Media Library';
+                this.elements.animationSettingsMenu.style.display = 'block';
             }
-            // Resize stage when assets panel expands/collapses
-            resizeStage();
-        });
 
-        // Event listener for the new "Set Background Image" button
-        document.getElementById('setBackgroundImage').addEventListener('click', () => {
-            document.getElementById('background-image-input').click();
-        });
+            saveAnimationSettings() {
+                this.shakeSettings = {
+                    speed: parseFloat(this.elements.shakeSpeedSlider.value),
+                    repetitions: parseInt(this.elements.shakeRepetitionsInput.value),
+                    distance: parseInt(this.elements.shakeDistanceSlider.value)
+                };
+                this.circleSettings = {
+                    speed: parseFloat(this.elements.circleSpeedSlider.value),
+                    repetitions: parseInt(this.elements.circleRepetitionsInput.value),
+                    radius: parseInt(this.elements.circleRadiusSlider.value)
+                };
+                this.flipSettings = {
+                    speed: parseFloat(this.elements.flipSpeedSlider.value),
+                    repetitions: parseInt(this.elements.flipRepetitionsInput.value)
+                };
+                this.elements.animationSettingsMenu.style.display = 'none';
+                this.showShortcutFeedback('Animation settings saved');
+            }
 
-        // Resize stage function for consistency
-        function resizeStage() {
-            if (!stage) return;
-            const toolbarWidth = document.getElementById('toolbar').offsetWidth;
-            const assetsPanelWidth = assetsPanel.classList.contains('expanded') ? assetsPanel.offsetWidth : 0;
-            stage.width(window.innerWidth - toolbarWidth - assetsPanelWidth);
-            stage.height(window.innerHeight);
+            showTextPopup() {
+                this.elements.textPopup.style.display = 'block';
+                this.elements.popupTextInput.value = 'New Text';
+                this.elements.colorPicker.value = '#ffffff';
+                this.elements.fontPicker.value = 'Arial';
+                this.elements.fontSizeSlider.value = '24';
+                this.elements.fontSizeValue.textContent = '24px';
+                this.updateTextPreview();
+            }
 
-            // If there's a background image, re-scale and re-center it
-            const currentBg = backgroundLayer.findOne('.background_image');
-            if (currentBg) {
-                const img = currentBg.image();
-                if (img) {
-                    const stageWidth = stage.width();
-                    const stageHeight = stage.height();
+            updateTextPreview() {
+                this.elements.textPreview.textContent = this.elements.popupTextInput.value || 'Preview Text';
+                this.elements.textPreview.style.color = this.elements.colorPicker.value;
+                this.elements.textPreview.style.fontFamily = this.elements.fontPicker.value;
+                this.elements.textPreview.style.fontSize = `${this.elements.fontSizeSlider.value}px`;
+                
+                const hex = this.elements.colorPicker.value.substring(1);
+                const r = parseInt(hex.substring(0, 2), 16);
+                const g = parseInt(hex.substring(2, 4), 16);
+                const b = parseInt(hex.substring(4, 6), 16);
+                const brightness = ((r * 299) + (g * 587) + (b * 114)) / 1000;
+                this.elements.textPreview.style.backgroundColor = brightness > 125 ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.2)';
+            }
+
+            addTextToCanvas() {
+                const textContent = this.elements.popupTextInput.value || 'New Text';
+                const color = this.elements.colorPicker.value;
+                const font = this.elements.fontPicker.value;
+                const fontSize = parseInt(this.elements.fontSizeSlider.value);
+                const uniqueId = 'text_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
+                // Calculate center position for the new text node
+                const centerX = this.stage.width() / 2;
+                const centerY = this.stage.height() / 2;
+
+                this.addTextNode(textContent, centerX, centerY, fontSize, color, font, uniqueId);
+                
+                this.elements.textPopup.style.display = 'none';
+                this.showShortcutFeedback('Text added to Canvas');
+            }
+
+            makeTextPopupDraggable() {
+                let isDraggingTextPopup = false;
+                let textPopupOffsetX, textPopupOffsetY;
+
+                this.elements.textPopupTitleBar.addEventListener('mousedown', (e) => {
+                    isDraggingTextPopup = true;
+                    textPopupOffsetX = e.clientX - this.elements.textPopup.getBoundingClientRect().left;
+                    textPopupOffsetY = e.clientY - this.elements.textPopup.getBoundingClientRect().top;
+                    this.elements.textPopup.style.cursor = 'grabbing';
+                });
+
+                document.addEventListener('mousemove', (e) => {
+                    if (!isDraggingTextPopup) return;
+                    this.elements.textPopup.style.left = `${e.clientX - textPopupOffsetX}px`;
+                    this.elements.textPopup.style.top = `${e.clientY - textPopupOffsetY}px`;
+                });
+
+                document.addEventListener('mouseup', () => {
+                    isDraggingTextPopup = false;
+                    this.elements.textPopup.style.cursor = 'grab';
+                });
+            }
+
+            openAssetsPanel() {
+                if (!this.elements.assetsPanel.classList.contains('expanded')) {
+                    this.elements.assetsPanel.classList.add('expanded');
+                    this.elements.assetsPanelToggle.innerHTML = '▶';
+                    this.elements.assetsPanelToggle.title = 'Collapse Media Library';
+                }
+            }
+
+            toggleAssetsPanel() {
+                this.elements.assetsPanel.classList.toggle('expanded');
+                if (this.elements.assetsPanel.classList.contains('expanded')) {
+                    this.elements.assetsPanelToggle.innerHTML = '▶';
+                    this.elements.assetsPanelToggle.title = 'Collapse Media Library';
+                } else {
+                    this.elements.assetsPanelToggle.innerHTML = '◀';
+                    this.elements.assetsPanelToggle.title = 'Expand Media Library';
+                }
+            }
+
+            resizeStage() {
+                if (!this.stage) return;
+                const toolbarWidth = this.elements.toolbar.offsetWidth;
+                // Account for the assets panel if it's expanded
+                const assetsPanelWidth = this.elements.assetsPanel.classList.contains('expanded') ? this.elements.assetsPanel.offsetWidth : 0;
+                this.stage.width(window.innerWidth - toolbarWidth - assetsPanelWidth);
+                this.stage.height(window.innerHeight);
+
+                const repositionFixedLayer = (node) => {
+                    if (!node || !node.image()) return;
+                    const img = node.image();
+                    const stageWidth = this.stage.width();
+                    const stageHeight = this.stage.height();
 
                     const scaleX = stageWidth / img.width;
                     const scaleY = stageHeight / img.height;
@@ -2530,125 +2557,54 @@
                     const x = (stageWidth - newWidth) / 2;
                     const y = (stageHeight - newHeight) / 2;
 
-                    currentBg.setAttrs({
-                        x: x,
-                        y: y,
-                        width: newWidth,
-                        height: newHeight
-                    });
-                    backgroundLayer.draw();
-                }
+                    node.setAttrs({ x: x, y: y, width: newWidth, height: newHeight });
+                };
+
+                repositionFixedLayer(this.currentBackgroundNode);
+                if (this.currentBackgroundNode) this.backgroundLayer.draw();
+
+                repositionFixedLayer(this.currentForegroundNode);
+                if (this.currentForegroundNode) this.foregroundLayer.draw();
+                
+                this.layer.draw(); // Redraw main layer to ensure draggable elements are visible
             }
-            layer.draw(); // Redraw main layer to ensure everything is visible
-        }
 
-        /**
-         * Changes the background color of the canvas container.
-         * @param {string} color - The hexadecimal color string (e.g., '#RRGGBB').
-         */
-        function changeBackgroundColor(color) {
-            // Fix: Change the container background color instead of document.body
-            document.getElementById('container').style.backgroundColor = color;
-            showShortcutFeedback(`Background changed to ${color}`);
-        }
+            changeBackgroundColor(color) {
+                this.elements.container.style.backgroundColor = color;
+                this.showShortcutFeedback(`Background changed to ${color}`);
+            }
 
-        // Initialize Konva Stage and Layer
-        function initializeApp() {
-            try {
-                const container = document.getElementById('container');
-                stage = new Konva.Stage({
-                    container: 'container',
-                    width: window.innerWidth - (document.getElementById('toolbar').offsetWidth + (assetsPanel.classList.contains('expanded') ? assetsPanel.offsetWidth : 0)),
-                    height: window.innerHeight,
-                });
-
-                backgroundLayer = new Konva.Layer(); // Initialize background layer
-                stage.add(backgroundLayer); // Add background layer first
-
-                layer = new Konva.Layer(); // Main content layer
-                stage.add(layer); // Add main layer second
-
-                transformer = new Konva.Transformer({
-                    nodes: [],
-                    centeredScaling: false,
-                    enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
-                    borderStroke: '#34c759', // Default green
-                    borderStrokeWidth: 2,
-                    anchorStroke: '#34c759', // Default green
-                    anchorFill: '#34c759', // Default green
-                    anchorSize: 12,
-                    rotateEnabled: true,
-                    rotationSnaps: [0, 90, 180, 270],
-                    keepRatio: true, // Keep aspect ratio by default
-                });
-                layer.add(transformer);
-
-                // Deselect on stage click
-                stage.on('click tap', (e) => {
-                    // Only clear transformer if clicked on stage or a non-selectable element
-                    if (e.target === stage || e.target === layer || e.target === backgroundLayer) {
-                        transformer.nodes([]);
-                        layer.draw();
+            /** Cleanup **/
+            cleanup() {
+                this.activeGifAnimations.forEach((animation) => {
+                    if (animation && animation.stop) {
+                        animation.stop();
                     }
                 });
+                this.activeGifAnimations.clear();
 
-                // Attach event listeners for color swatches
-                const colorSwatches = document.querySelectorAll('.color-swatch');
-                colorSwatches.forEach(swatch => {
-                    swatch.addEventListener('click', () => {
-                        const color = swatch.dataset.color;
-                        changeBackgroundColor(color);
-                    });
+                this.activeAnimations.forEach((animation) => {
+                    if (animation && animation.stop) {
+                        animation.stop();
+                    }
                 });
+                this.activeAnimations.clear();
 
-                // Attach onchange event listeners to file inputs
-                document.getElementById('file-input').addEventListener('change', (e) => handleFiles(e.target.files));
-                document.getElementById('folder-input').addEventListener('change', (e) => handleFolderFiles(e.target.files));
-                document.getElementById('background-image-input').addEventListener('change', (e) => handleBackgroundImage(e.target.files));
-
-                // Handle resizing
-                window.addEventListener('resize', resizeStage);
-
-                // Clear all animations and media on page unload to prevent memory leaks
-                window.addEventListener('beforeunload', () => {
-                    activeGifAnimations.forEach((animation) => {
-                        if (animation && animation.stop) {
-                            animation.stop();
-                        }
-                    });
-                    activeGifAnimations.clear();
-
-                    // Stop all other animations
-                    activeAnimations.forEach((animation) => {
-                        if (animation && animation.stop) {
-                            animation.stop();
-                        }
-                    });
-                    activeAnimations.clear();
-
-                    // Clean up media elements
-                    mediaElements.forEach((element) => {
-                        if (element.pause) element.pause();
-                        if (element.remove) element.remove();
-                    });
-                    mediaElements.clear();
-                    
-                    // Clear asset cache
-                    assetCache.clear();
+                this.mediaElements.forEach((element) => {
+                    if (element.pause) element.pause();
+                    if (element.remove) element.remove();
                 });
-
-                console.log('Gaze Tracker Canvas initialized successfully');
-            } catch (e) {
-                console.error('Error initializing app:', e);
-                showError('Failed to initialize application');
+                this.mediaElements.clear();
+                
+                this.assetCache.clear(); 
             }
         }
 
         // Initialize the app when DOM is ready
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initializeApp);
+            document.addEventListener('DOMContentLoaded', () => new GazeTrackerApp().init());
         } else {
-            initializeApp();
+            new GazeTrackerApp().init();
         }
     </script>
 </body>
