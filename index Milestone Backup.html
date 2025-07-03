@@ -142,7 +142,18 @@
                     };
                     reader.readAsDataURL(file);
                 } else if (file.type.startsWith('video/')) {
-                    // Handle video files similarly if needed
+                    var reader = new FileReader();
+                    reader.onload = function (e) {
+                        var video = document.createElement('video');
+                        video.src = e.target.result;
+                        video.autoplay = true;
+                        video.loop = true;
+                        video.muted = true;
+                        video.addEventListener('loadeddata', function () {
+                            drawVideo(video);
+                        });
+                    };
+                    reader.readAsDataURL(file);
                 }
             });
         }
@@ -170,6 +181,37 @@
 
             layer.add(image);
             layer.draw();
+        }
+
+        function drawVideo(videoObj) {
+            var vidWidth = videoObj.videoWidth;
+            var vidHeight = videoObj.videoHeight;
+            var scale = Math.min(stage.width() / vidWidth, stage.height() / vidHeight);
+
+            var videoImage = new Konva.Image({
+                image: videoObj,
+                x: (stage.width() - vidWidth * scale) / 2,
+                y: (stage.height() - vidHeight * scale) / 2,
+                width: vidWidth * scale,
+                height: vidHeight * scale,
+                draggable: true
+            });
+
+            videoImage.on('mousedown', function() {
+                selectedElement = this;
+                transformer.nodes([this]);
+                transformer.forceUpdate();
+                layer.draw();
+            });
+
+            layer.add(videoImage);
+
+            var anim = new Konva.Animation(function() {
+                layer.batchDraw();
+            }, layer);
+            anim.start();
+
+            videoObj.play();
         }
 
         document.getElementById('addText').addEventListener('click', function() {
